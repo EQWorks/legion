@@ -1,21 +1,26 @@
 {
   "name": "legion",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "EQ Slack command proxy",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "author": "",
-  "license": "UNLICENSED",
   "dependencies": {
-    "axios": "^0.16.2",
+    "express": "^4.15.3",
     "body-parser": "^1.17.2",
-    "express": "^4.15.3"
+    "axios": "^0.16.2"
   },
-  "devDependencies": {
-    "nodemon": "^1.11.0"
-  }
+  "engines": {
+    "node": "8.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/welcome-project"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express"
+  ]
 }
