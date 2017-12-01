@@ -3,10 +3,11 @@ const bodyParser = require('body-parser')
 const axios = require('axios')
 
 const PORT = process.env.PORT || 8000
-const OVERSEER_API_BASE = process.env.OVERSEER_API_BASE || 'https://api.eqworks.com/beta'
-const OVERSEER_API_USER = process.env.OVERSEER_API_USER || ''
-const OVERSEER_API_KEY = process.env.OVERSEER_API_KEY || ''
+// const OVERSEER_API_BASE = process.env.OVERSEER_API_BASE || 'https://api.eqworks.com/beta'
+// const OVERSEER_API_USER = process.env.OVERSEER_API_USER || ''
+// const OVERSEER_API_KEY = process.env.OVERSEER_API_KEY || ''
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || ''
+const VID_COMP_API = process.env.VID_COMP_API || ''
 
 const app = express()
 
@@ -50,7 +51,8 @@ app.all('/video_completion_report', (req, res) => {
     })
   }
   getEmail(req.body.user_id).then((email) => {
-    return axios.get('https://ngmjazqsq1.execute-api.us-east-1.amazonaws.com/dev/receiver', {
+    return axios.get('/dev/receiver', {
+      baseURL: VID_COMP_API,
       params: {
         camp_code: parts[0],
         start: parts[1],
