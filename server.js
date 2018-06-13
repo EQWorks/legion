@@ -1,13 +1,14 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const axios = require('axios')
+const { Parser } = require('json2csv')
 
 const PORT = process.env.PORT || 8000
-// const OVERSEER_API_BASE = process.env.OVERSEER_API_BASE || 'https://api.eqworks.com/beta'
-// const OVERSEER_API_USER = process.env.OVERSEER_API_USER || ''
-// const OVERSEER_API_KEY = process.env.OVERSEER_API_KEY || ''
+const AUTH_JWT = process.env.AUTH_JWT || ''
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || ''
+const SLACK_VERIFY_TOKEN = process.env.SLACK_VERIFY_TOKEN || ''
 const VID_COMP_API = process.env.VID_COMP_API || ''
+const WL_SEG_API = process.env.WL_SEG_API || ''
 
 const app = express()
 
@@ -28,7 +29,59 @@ const getEmail = (user_id) => {
   })
 }
 
-app.all('/video_completion_report', (req, res) => {
+const verifySlack = (req, res, next) => {
+  const token = req.body.token
+  if (token === SLACK_VERIFY_TOKEN) {
+    return next()
+  }
+  return res.status(403).json({
+    text: 'Cartman, is that you?'
+  })
+}
+
+const isInternal = (req, res, next) => {
+  getEmail(req.body.user_id).then((email) => {
+    if (/eqworks.com$/.test(email)) {
+      return next()
+    }
+    return res.status(403).json({
+      text: 'This is open to eqworks.com internal user only',
+      mrkdwn: true
+    })
+  })
+}
+
+app.all('/wl_seg_imps', verifySlack, isInternal, (req, res) => {
+  const isoDateR = /\d{4}-[01]\d-[0-3]\d/
+  const date = (req.body.text || '').trim().match(isoDateR)
+  const params = {}
+  if (date) {
+    params.date = date[0]
+  }
+  axios.get('/dev/', {
+    baseURL: WL_SEG_API,
+    params,
+    headers: {
+      'eq-api-jwt': AUTH_JWT
+    }
+  }).then((resp) => {
+    const p = new Parser({
+      fields: ['whitelabelid', 'company', 'date', 'impressions']
+    })
+    return res.json({
+      text: '```' + p.parse(resp.data) + '```',
+      mrkdwn: true
+    })
+  }).catch((err) => {
+    console.log(err)
+    return res.json({
+      text: `Error: ${((err.response || {}).data || {}).message || err.message || 'Unable to get wl segments impressions'}`,
+      mrkdwn: true
+    })
+  })
+})
+
+app.all('/video_completion_report', verifySlack, (req, res) => {
   /*
     { token: '...',
     team_id: '...',
