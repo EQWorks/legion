@@ -11,6 +11,7 @@ const SLACK_VERIFY_TOKEN = process.env.SLACK_VERIFY_TOKEN || ''
 const VID_COMP_API = process.env.VID_COMP_API || ''
 const WL_SEG_API = process.env.WL_SEG_API || ''
 const SLACK_OVERLORD_WEBHOOK = process.env.SLACK_OVERLORD_WEBHOOK || ''
+const SLACK_SNOKE_WEBHOOK = process.env.SLACK_SNOKE_WEBHOOK || ''
 
 const app = express()
 
@@ -133,8 +134,11 @@ app.all('/video_completion_report', verifySlack, (req, res) => {
 })
 
 app.all('/overlord-deploy', (req, res) => {
-  console.log('overlord-deploy')
-  console.log(req.body)
+  if (req.body.branch !== 'maintenance') {
+    // we don't care about deploy of branch other than maintenance
+    return
+  }
+
   const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
   console.log(logPage)
   axios({
@@ -142,6 +146,30 @@ app.all('/overlord-deploy', (req, res) => {
     url: SLACK_OVERLORD_WEBHOOK,
     data: {
       text: `You invoked overlord *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+    }
+  }).then((resp) => {
+    console.log('success', resp.data)
+    return res.json({
+      text: 'good'
+    })
+  }).catch((err) => {
+    console.log(err)
+  })
+})
+
+app.all('/snoke-deploy', (req, res) => {
+  if (req.body.branch !== 'maintenance') {
+    // we don't care about deploy of branch other than maintenance
+    return
+  }
+
+  const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
+  console.log(logPage)
+  axios({
+    method: 'post',
+    url: SLACK_SNOKE_WEBHOOK,
+    data: {
+      text: `You invoked snoke *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
     console.log('success', resp.data)
