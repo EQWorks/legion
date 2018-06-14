@@ -1,0 +1,28 @@
+service: legion
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  timeout: 300
+  stage: dev
+  region: us-east-1
+
+functions:
+  legion:
+    handler: app.handler
+    environment:
+      AUTH_JWT: ${env:AUTH_JWT}
+      SLACK_BOT_TOKEN: ${env:SLACK_BOT_TOKEN}
+      SLACK_VERIFY_TOKEN: ${env:SLACK_VERIFY_TOKEN}
+      SLACK_OVERLORD_WEBHOOK: ${env:SLACK_OVERLORD_WEBHOOK}
+      VID_COMP_API: ${env:VID_COMP_API}
+      WL_SEG_API: ${env:WL_SEG_API}
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors: true
+      - http:
+          path: '{proxy+}'
+          method: ANY
+          cors: true

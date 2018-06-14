@@ -1,4 +1,5 @@
 const express = require('express')
+const serverless = require('serverless-http');
 const bodyParser = require('body-parser')
 const axios = require('axios')
 const { Parser } = require('json2csv')
@@ -9,10 +10,13 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || ''
 const SLACK_VERIFY_TOKEN = process.env.SLACK_VERIFY_TOKEN || ''
 const VID_COMP_API = process.env.VID_COMP_API || ''
 const WL_SEG_API = process.env.WL_SEG_API || ''
+const SLACK_OVERLORD_WEBHOOK = process.env.SLACK_OVERLORD_WEBHOOK || ''
 
 const app = express()
 
 app.use(bodyParser.urlencoded({ extended: false }))
+
+app.use(bodyParser.json())
 
 app.get('/', (req, res) => {
   return res.send('We Are Legion')
@@ -34,6 +38,7 @@ const verifySlack = (req, res, next) => {
   if (token === SLACK_VERIFY_TOKEN) {
     return next()
   }
+  console.log('Cartman, is that you?')
   return res.status(403).json({
     text: 'Cartman, is that you?'
   })
@@ -44,6 +49,7 @@ const isInternal = (req, res, next) => {
     if (/eqworks.com$/.test(email)) {
       return next()
     }
+    console.log('This is open to eqworks.com internal user only')
     return res.status(403).json({
       text: 'This is open to eqworks.com internal user only',
       mrkdwn: true
@@ -126,10 +132,25 @@ app.all('/video_completion_report', verifySlack, (req, res) => {
   })
 })
 
-app.listen(PORT, (err) => {
-  if (err) {
-    console.error(err)
-    process.exit(1)
-  }
-  console.log(`Listening on port ${PORT}`)
+app.all('/overlord-deploy', (req, res) => {
+  console.log('overlord-deploy')
+  console.log(req.body)
+  const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
+  console.log(logPage)
+  axios({
+    method: 'post',
+    url: SLACK_OVERLORD_WEBHOOK,
+    data: {
+      text: `You invoked overlord *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+    }
+  }).then((resp) => {
+    console.log('success', resp.data)
+    return res.json({
+      text: 'good'
+    })
+  }).catch((err) => {
+    console.log(err)
+  })
 })
+
+module.exports.handler = serverless(app)

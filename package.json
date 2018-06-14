@@ -4,13 +4,15 @@
   "description": "EQ Slack command proxy",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "env $(print-env) sls deploy"
   },
   "dependencies": {
-    "express": "^4.16.3",
-    "body-parser": "^1.18.3",
     "axios": "^0.18.0",
-    "json2csv": "*"
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "json2csv": "*",
+    "serverless-http": "^1.5.5"
   },
   "engines": {
     "node": "8.x"
