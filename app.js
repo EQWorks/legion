@@ -17,9 +17,15 @@ const OVERLORD_MAINT_BUILD_HOOK = process.env.OVERLORD_MAINT_BUILD_HOOK || ''
 
 const app = express()
 
-const projectBuildHooks = {
-  'overlord': OVERLORD_MAINT_BUILD_HOOK,
-  'snoke': SNOKE_MAINT_BUILD_HOOK
+const projects = {
+  'overlord': {
+    buildHook: OVERLORD_MAINT_BUILD_HOOK,
+    slackHook: SLACK_OVERLORD_WEBHOOK,
+  },
+  'snoke': {
+    buildHook: SNOKE_MAINT_BUILD_HOOK,
+    slackHook: SLACK_SNOKE_WEBHOOK,
+  }
 }
 
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -142,8 +148,7 @@ app.post('/maintenance/:project', verifySlack, (req) => {
   const { user_name, response_url } = req.body
   const { project } = req.params
 
-  console.log('maintenance')
-  if (!Object.keys(projectBuildHooks).includes(project)) {
+  if (!Object.keys(projects).includes(project)) {
     axios({
       method: 'post',
       url: response_url,
@@ -154,20 +159,20 @@ app.post('/maintenance/:project', verifySlack, (req) => {
     })
     return
   }
-  console.log('aaaaa')
+
   axios({
     method: 'post',
-    url: projectBuildHooks[project],
+    url: projects[project].slackHook,
     data: {
-      text: `${user_name} invoked ${project} *maintenance* deployment`
+      text: `*${user_name}* invoked ${project} *maintenance* deployment`
     }
   }).catch((err) => {
     console.log(err)
   })
-  console.log('bbbbbb')
+
   axios({
     method: 'post',
-    url: projectBuildHooks[project],
+    url: projects[project].buildHook,
     data: {}
   }).catch((err) => {
     console.log(err)
