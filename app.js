@@ -190,7 +190,7 @@ app.all('/overlord-deploy', (req, res) => {
     method: 'post',
     url: SLACK_OVERLORD_WEBHOOK,
     data: {
-      text: `Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+      text: `*Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
     return res.json({
@@ -212,7 +212,7 @@ app.all('/snoke-deploy', (req, res) => {
     method: 'post',
     url: SLACK_SNOKE_WEBHOOK,
     data: {
-      text: `Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+      text: `*Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
     return res.json({
