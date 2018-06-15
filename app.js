@@ -12,8 +12,15 @@ const VID_COMP_API = process.env.VID_COMP_API || ''
 const WL_SEG_API = process.env.WL_SEG_API || ''
 const SLACK_OVERLORD_WEBHOOK = process.env.SLACK_OVERLORD_WEBHOOK || ''
 const SLACK_SNOKE_WEBHOOK = process.env.SLACK_SNOKE_WEBHOOK || ''
+const SNOKE_MAINT_BUILD_HOOK = process.env.SNOKE_MAINT_BUILD_HOOK || ''
+const OVERLORD_MAINT_BUILD_HOOK = process.env.OVERLORD_MAINT_BUILD_HOOK || ''
 
 const app = express()
+
+const projectBuildHooks = {
+  'overlord': OVERLORD_MAINT_BUILD_HOOK,
+  'snoke': SNOKE_MAINT_BUILD_HOOK
+}
 
 app.use(bodyParser.urlencoded({ extended: false }))
 
@@ -131,6 +138,42 @@ app.all('/video_completion_report', verifySlack, (req, res) => {
   })
 })
 
+app.post('/maintenance/:project', verifySlack, (req) => {
+  const { user_name, response_url } = req.body
+  const { project } = req.params
+
+  console.log('maintenance')
+  if (!Object.keys(projectBuildHooks).includes(project)) {
+    axios({
+      method: 'post',
+      url: response_url,
+      data: {
+        "response_type": "ephemeral",
+        "text": `Sorry, project ${project} is not supported`
+      }
+    })
+    return
+  }
+  console.log('aaaaa')
+  axios({
+    method: 'post',
+    url: projectBuildHooks[project],
+    data: {
+      text: `${user_name} invoked ${project} *maintenance* deployment`
+    }
+  }).catch((err) => {
+    console.log(err)
+  })
+  console.log('bbbbbb')
+  axios({
+    method: 'post',
+    url: projectBuildHooks[project],
+    data: {}
+  }).catch((err) => {
+    console.log(err)
+  })
+})
+
 app.all('/overlord-deploy', (req, res) => {
   if (req.body.branch !== 'maintenance') {
     // we don't care about deploy of branch other than maintenance
@@ -142,7 +185,7 @@ app.all('/overlord-deploy', (req, res) => {
     method: 'post',
     url: SLACK_OVERLORD_WEBHOOK,
     data: {
-      text: `You invoked overlord *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+      text: `Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
     return res.json({
@@ -164,7 +207,7 @@ app.all('/snoke-deploy', (req, res) => {
     method: 'post',
     url: SLACK_SNOKE_WEBHOOK,
     data: {
-      text: `You invoked snoke *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+      text: `Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
     return res.json({

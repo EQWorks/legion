@@ -19,6 +19,8 @@ functions:
       SLACK_SNOKE_WEBHOOK: ${env:SLACK_SNOKE_WEBHOOK}
       VID_COMP_API: ${env:VID_COMP_API}
       WL_SEG_API: ${env:WL_SEG_API}
+      SNOKE_MAINT_BUILD_HOOK: ${env:SNOKE_MAINT_BUILD_HOOK}
+      OVERLORD_MAINT_BUILD_HOOK: ${env:OVERLORD_MAINT_BUILD_HOOK}
     events:
       - http:
           path: /
