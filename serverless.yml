@@ -6,6 +6,7 @@ provider:
   timeout: 300
   stage: dev
   region: us-east-1
+  memorySize: 512
 
 functions:
   legion:

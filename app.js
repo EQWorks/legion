@@ -39,7 +39,6 @@ const verifySlack = (req, res, next) => {
   if (token === SLACK_VERIFY_TOKEN) {
     return next()
   }
-  console.log('Cartman, is that you?')
   return res.status(403).json({
     text: 'Cartman, is that you?'
   })
@@ -50,7 +49,6 @@ const isInternal = (req, res, next) => {
     if (/eqworks.com$/.test(email)) {
       return next()
     }
-    console.log('This is open to eqworks.com internal user only')
     return res.status(403).json({
       text: 'This is open to eqworks.com internal user only',
       mrkdwn: true
@@ -140,7 +138,6 @@ app.all('/overlord-deploy', (req, res) => {
   }
 
   const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
-  console.log(logPage)
   axios({
     method: 'post',
     url: SLACK_OVERLORD_WEBHOOK,
@@ -148,7 +145,6 @@ app.all('/overlord-deploy', (req, res) => {
       text: `You invoked overlord *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
-    console.log('success', resp.data)
     return res.json({
       text: 'good'
     })
@@ -164,7 +160,6 @@ app.all('/snoke-deploy', (req, res) => {
   }
 
   const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
-  console.log(logPage)
   axios({
     method: 'post',
     url: SLACK_SNOKE_WEBHOOK,
@@ -172,7 +167,6 @@ app.all('/snoke-deploy', (req, res) => {
       text: `You invoked snoke *maintenance* deployment\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
     }
   }).then((resp) => {
-    console.log('success', resp.data)
     return res.json({
       text: 'good'
     })
