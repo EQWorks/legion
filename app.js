@@ -1,4 +1,5 @@
 const express = require('express')
+const serverless = require('serverless-http');
 const bodyParser = require('body-parser')
 const axios = require('axios')
 const { Parser } = require('json2csv')
@@ -9,10 +10,27 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || ''
 const SLACK_VERIFY_TOKEN = process.env.SLACK_VERIFY_TOKEN || ''
 const VID_COMP_API = process.env.VID_COMP_API || ''
 const WL_SEG_API = process.env.WL_SEG_API || ''
+const SLACK_OVERLORD_WEBHOOK = process.env.SLACK_OVERLORD_WEBHOOK || ''
+const SLACK_SNOKE_WEBHOOK = process.env.SLACK_SNOKE_WEBHOOK || ''
+const SNOKE_MAINT_BUILD_HOOK = process.env.SNOKE_MAINT_BUILD_HOOK || ''
+const OVERLORD_MAINT_BUILD_HOOK = process.env.OVERLORD_MAINT_BUILD_HOOK || ''
 
 const app = express()
 
+const projects = {
+  'overlord': {
+    buildHook: OVERLORD_MAINT_BUILD_HOOK,
+    slackHook: SLACK_OVERLORD_WEBHOOK,
+  },
+  'snoke': {
+    buildHook: SNOKE_MAINT_BUILD_HOOK,
+    slackHook: SLACK_SNOKE_WEBHOOK,
+  }
+}
+
 app.use(bodyParser.urlencoded({ extended: false }))
+
+app.use(bodyParser.json())
 
 app.get('/', (req, res) => {
   return res.send('We Are Legion')
@@ -126,10 +144,83 @@ app.all('/video_completion_report', verifySlack, (req, res) => {
   })
 })
 
-app.listen(PORT, (err) => {
-  if (err) {
-    console.error(err)
-    process.exit(1)
+app.post('/maintenance/:project', verifySlack, (req) => {
+  const { user_name, response_url } = req.body
+  const { project } = req.params
+
+  if (!Object.keys(projects).includes(project)) {
+    axios({
+      method: 'post',
+      url: response_url,
+      data: {
+        "response_type": "ephemeral",
+        "text": `Sorry, project ${project} is not supported`
+      }
+    })
+    return
   }
-  console.log(`Listening on port ${PORT}`)
+
+  axios({
+    method: 'post',
+    url: projects[project].slackHook,
+    data: {
+      text: `*${user_name}* invoked ${project} *maintenance* deployment`
+    }
+  }).catch((err) => {
+    console.log(err)
+  })
+
+  axios({
+    method: 'post',
+    url: projects[project].buildHook,
+    data: {}
+  }).catch((err) => {
+    console.log(err)
+  })
 })
+
+app.all('/overlord-deploy', (req, res) => {
+  if (req.body.branch !== 'maintenance') {
+    // we don't care about deploy of branch other than maintenance
+    return
+  }
+
+  const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
+  axios({
+    method: 'post',
+    url: SLACK_OVERLORD_WEBHOOK,
+    data: {
+      text: `*Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+    }
+  }).then((resp) => {
+    return res.json({
+      text: 'good'
+    })
+  }).catch((err) => {
+    console.log(err)
+  })
+})
+
+app.all('/snoke-deploy', (req, res) => {
+  if (req.body.branch !== 'maintenance') {
+    // we don't care about deploy of branch other than maintenance
+    return
+  }
+
+  const logPage = `${req.body.admin_url}/deploys/${req.body.id}`
+  axios({
+    method: 'post',
+    url: SLACK_SNOKE_WEBHOOK,
+    data: {
+      text: `*Maintenance* deployment started\nTo switch to maintenance, checkout <${logPage}|*build status*> and click *publish deploy* when it finished`
+    }
+  }).then((resp) => {
+    return res.json({
+      text: 'good'
+    })
+  }).catch((err) => {
+    console.log(err)
+  })
+})
+
+module.exports.handler = serverless(app)
