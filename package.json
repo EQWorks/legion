@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "deploy": "env $(print-env) sls deploy"
+    "deploy": "env $(print-env) sls deploy",
+    "lint": "eslint --ext .js ."
   },
   "dependencies": {
     "axios": "^0.18.0",
@@ -25,5 +26,9 @@
     "node",
     "glitch",
     "express"
-  ]
+  ],
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.6.1"
+  }
 }
