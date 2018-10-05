@@ -1,7 +1,7 @@
 const express = require('express')
 const axios = require('axios')
 
-const { verifySlack } = './middleware'
+const { verifySlack } = require('./middleware')
 
 
 const router = express.Router()
@@ -69,3 +69,6 @@ router.all(['video_completion', '/video_completion_report'], verifySlack, (req, 
     })
   })
 })
+
+
+module.exports = router

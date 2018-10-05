@@ -1,7 +1,7 @@
 const express = require('express')
 const axios = require('axios')
 
-const { verifySlack } = './middleware'
+const { verifySlack } = require('./middleware')
 
 
 const router = express.Router()
