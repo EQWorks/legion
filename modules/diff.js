@@ -19,6 +19,11 @@ const PRODUCTS = {
     stages: ['dev', 'prod'],
     key: 'API_VER',
   },
+  keywarden: {
+    baseURL: 'https://auth.eqworks.io',
+    stages: ['dev', 'prod'],
+    key: 'KEYWARDEN_VER',
+  },
 }
 
 const router = express.Router()
