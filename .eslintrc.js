@@ -25,10 +25,6 @@ module.exports = {
       "error",
       "never",
     ],
-    "comma-dangle": [
-      "error",
-      "never",
-    ],
     "no-console": [
       "error",
       { allow: ["warn", "error"] },
