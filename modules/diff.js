@@ -76,8 +76,8 @@ router.all('/', verifySlack, async (req, res, next) => {
     await web.chat.postMessage({ channel, text: texts.join('\n') })
 
     return res.json({
-      [dev]: base,
-      [prod]: head,
+      [dev]: head,
+      [prod]: base,
     })
   } catch(err) {
     return next(err)
