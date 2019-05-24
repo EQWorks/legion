@@ -11,11 +11,17 @@ const diff = require('./modules/diff')
 
 const app = express()
 
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())
+const rawBodyBuffer = (req, _, buf, encoding) => {
+  if (buf && buf.length) {
+    req.rawBody = buf.toString(encoding || 'utf8')
+  }
+}
 
-app.get('/', (req, res) => {
-  axios.get('https://api.github.com/zen').then(({ data }) => res.send(data))
+app.use(bodyParser.urlencoded({verify: rawBodyBuffer, extended: true }))
+app.use(bodyParser.json({ verify: rawBodyBuffer }))
+
+app.get('/', (_, res, next) => {
+  axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
 // secondary prefix for backward compat

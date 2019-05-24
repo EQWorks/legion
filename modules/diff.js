@@ -1,6 +1,6 @@
 const express = require('express')
 const axios = require('axios')
-const { WebClient } = require('@slack/client')
+const { WebClient } = require('@slack/web-api')
 
 const { verifySlack } = require('./middleware')
 
