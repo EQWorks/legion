@@ -69,7 +69,7 @@ router.all('/', verifySlack, async (req, res, next) => {
       })
     }
 
-    const { data: { commits } } = await axios.get(
+    const { data: { commits, total_commits, status } } = await axios.get(
       `/repos/EQWorks/${product}/compare/${base}...${head}`,
       {
         baseURL: 'https://api.github.com',
@@ -82,37 +82,24 @@ router.all('/', verifySlack, async (req, res, next) => {
     const info = commits.map(({
       sha,
       html_url,
-      commit: { message },
-      author,
-      committer,
-    }) => ([
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: message,
-        },
-        accessory: {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: sha.slice(0, 7),
+      commit: { message, author, committer },
+    }) => {
+      const { name = '`Unknown Hacker`', date = '`Unknown Time`' } = (author || committer || {})
+      return [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: message },
+          accessory: {
+            type: 'button',
+            text: { type: 'plain_text', text: sha.slice(0, 7) },
+            url: html_url,
+            value: sha,
           },
-          url: html_url,
-          value: sha,
         },
-      },
-      {
-        type: 'context',
-        elements: [
-          {
-            type: 'plain_text',
-            text: (author || committer || {}).login || 'Unknown Code Genie',
-          },
-        ]
-      },
-      { type: 'divider' },
-    ]))
+        { type: 'context', elements: [{ type: 'mrkdwn', text: `${name} - ${date}` }] },
+        { type: 'divider' },
+      ]
+    })
     info.reverse()
 
     return res.status(200).json({
@@ -122,7 +109,7 @@ router.all('/', verifySlack, async (req, res, next) => {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${product}* \`${dev}\` and \`${prod}\` are on different \`${key}\``,
+            text: `*${product}* \`${dev}\` is ${status} by ${total_commits} compared to \`${prod}\``,
           }
         },
         { type: 'divider' },
