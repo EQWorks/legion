@@ -20,6 +20,7 @@ functions:
       GITHUB_TOKEN: ${env:GITHUB_TOKEN}
       SNOKE_MAINT_BUILD_HOOK: ${env:SNOKE_MAINT_BUILD_HOOK}
       OVERLORD_MAINT_BUILD_HOOK: ${env:OVERLORD_MAINT_BUILD_HOOK}
+      YELP_API_KEY: ${env:YELP_API_KEY}
     events:
       - http:
           path: /

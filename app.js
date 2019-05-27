@@ -7,6 +7,7 @@ const maintenance = require('./modules/maintenance')
 const deploy = require('./modules/deploy')
 const report = require('./modules/report')
 const diff = require('./modules/diff')
+const food = require('./modules/food')
 
 
 const app = express()
@@ -26,12 +27,10 @@ app.get('/', (_, res, next) => {
 
 // secondary prefix for backward compat
 app.use(['/report', '/'], report)
-
 app.use('/maintenance', maintenance)
-
 app.use('/deploy', deploy)
-
 app.use('/diff', diff)
+app.use('/food', food)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors
@@ -48,7 +47,7 @@ app.use((err, req, res, next) => {
     console.error(`[ERROR] ${message}`, err.stack || err)
   }
   // API response
-  return res.status(statusCode).json({
+  return res.json({
     statusCode,
     logLevel,
     message,
