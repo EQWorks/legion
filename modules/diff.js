@@ -3,7 +3,7 @@ const axios = require('axios')
 
 const { verifySlack } = require('./middleware')
 
-const { GITHUB_TOKEN } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 10 } = process.env
 
 
 // TODO: only supports 2-stage comparison for now
@@ -69,7 +69,7 @@ router.all('/', verifySlack, async (req, res, next) => {
       })
     }
 
-    const { data: { commits, total_commits, status } } = await axios.get(
+    const { data: { commits, total_commits, status, html_url } } = await axios.get(
       `/repos/EQWorks/${product}/compare/${base}...${head}`,
       {
         baseURL: 'https://api.github.com',
@@ -97,7 +97,6 @@ router.all('/', verifySlack, async (req, res, next) => {
           },
         },
         { type: 'context', elements: [{ type: 'mrkdwn', text: `${name} - ${date}` }] },
-        { type: 'divider' },
       ]
     })
     info.reverse()
@@ -109,12 +108,22 @@ router.all('/', verifySlack, async (req, res, next) => {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${product}* \`${dev}\` is ${status} by ${total_commits} compared to \`${prod}\``,
-          }
+            text: `
+              *${product}* \`${dev}\` is ${status} by ${total_commits} compared to \`${prod}\`
+              ${info.length > COMMIT_LIMIT ? `\n${COMMIT_LIMIT}/${info.length} most recent commits shown below` : ''}
+            `.trim(),
+          },
+          accessory: {
+            type: 'button',
+            text: { type: 'plain_text', text: `${base}...${head}` },
+            url: html_url,
+            value: `${base}...${head}`,
+          },
         },
         { type: 'divider' },
         // TODO: Array.prototype.flat not avail in Node until v11+
-        ...[].concat.apply([], info),
+        ...[].concat.apply([], info.length > COMMIT_LIMIT ? info.slice(0, COMMIT_LIMIT) : info),
+        { type: 'divider' },
         cxtBlk,
       ],
     })
