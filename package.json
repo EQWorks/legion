@@ -9,11 +9,12 @@
     "lint": "eslint --ext .js ."
   },
   "dependencies": {
-    "@slack/client": "^4.8.0",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
-    "serverless-http": "^1.5.5"
+    "lodash.samplesize": "^4.2.0",
+    "serverless-http": "^2.0.2",
+    "tsscmp": "^1.0.6"
   },
   "engines": {
     "node": "8.x"
@@ -24,8 +25,9 @@
   "license": "MIT",
   "keywords": [
     "node",
-    "glitch",
-    "express"
+    "express",
+    "slack",
+    "bot"
   ],
   "devDependencies": {
     "babel-eslint": "^10.0.1",

@@ -7,25 +7,30 @@ const maintenance = require('./modules/maintenance')
 const deploy = require('./modules/deploy')
 const report = require('./modules/report')
 const diff = require('./modules/diff')
+const food = require('./modules/food')
 
 
 const app = express()
 
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())
+const rawBodyBuffer = (req, _, buf, encoding) => {
+  if (buf && buf.length) {
+    req.rawBody = buf.toString(encoding || 'utf8')
+  }
+}
 
-app.get('/', (req, res) => {
-  axios.get('https://api.github.com/zen').then(({ data }) => res.send(data))
+app.use(bodyParser.urlencoded({verify: rawBodyBuffer, extended: true }))
+app.use(bodyParser.json({ verify: rawBodyBuffer }))
+
+app.get('/', (_, res, next) => {
+  axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
 // secondary prefix for backward compat
 app.use(['/report', '/'], report)
-
 app.use('/maintenance', maintenance)
-
 app.use('/deploy', deploy)
-
 app.use('/diff', diff)
+app.use('/food', food)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors
@@ -42,7 +47,7 @@ app.use((err, req, res, next) => {
     console.error(`[ERROR] ${message}`, err.stack || err)
   }
   // API response
-  return res.status(statusCode).json({
+  return res.json({
     statusCode,
     logLevel,
     message,
