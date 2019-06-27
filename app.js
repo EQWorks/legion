@@ -8,9 +8,13 @@ const deploy = require('./modules/deploy')
 const report = require('./modules/report')
 const diff = require('./modules/diff')
 const food = require('./modules/food')
+const boardroom = require('./modules/boardroom')
+const interactive = require('./modules/interactive')
 
 
 const app = express()
+
+app.use('/interactive', interactive.requestListener())
 
 const rawBodyBuffer = (req, _, buf, encoding) => {
   if (buf && buf.length) {
@@ -31,6 +35,7 @@ app.use('/maintenance', maintenance)
 app.use('/deploy', deploy)
 app.use('/diff', diff)
 app.use('/food', food)
+app.use('/boardroom', boardroom)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors
