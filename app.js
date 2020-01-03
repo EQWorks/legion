@@ -10,6 +10,7 @@ const diff = require('./modules/diff')
 const food = require('./modules/food')
 const boardroom = require('./modules/boardroom')
 const interactive = require('./modules/interactive')
+const pipeline = require('./modules/pipeline')
 
 
 const app = express()
@@ -36,6 +37,7 @@ app.use('/deploy', deploy)
 app.use('/diff', diff)
 app.use('/food', food)
 app.use('/boardroom', boardroom)
+app.use('/pipeline', pipeline)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors

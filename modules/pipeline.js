@@ -37,3 +37,5 @@ router.all('/', verifySlack, (_, res, next) => {
     })
   }).catch(next)
 })
+
+module.exports = router
