@@ -32,7 +32,7 @@ router.all('/', verifySlack, (_, res, next) => {
   // }
   count().then(({ count, limit }) => {
     return res.status(200).json({
-      response_type: 'ephemeral',
+      response_type: 'in_channel',
       text: `Pipeline usage: ${count}/${limit}`,
     })
   }).catch(next)
