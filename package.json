@@ -24,7 +24,7 @@
     "tsscmp": "^1.0.6"
   },
   "engines": {
-    "node": "8.x"
+    "node": "10.x"
   },
   "repository": {
     "url": "https://glitch.com/edit/#!/welcome-project"
@@ -37,6 +37,7 @@
     "bot"
   ],
   "devDependencies": {
+    "aws-sdk": "^2.597.0",
     "babel-eslint": "^10.0.1",
     "eslint": "^5.6.1",
     "ngrok": "^3.2.1",
