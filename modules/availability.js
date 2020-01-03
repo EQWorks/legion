@@ -13,13 +13,17 @@ const COMMAND_MAP = {
 router.all('/', verifySlack, (req, res, next) => {
   const { text = '' } = req.body || {}
   const [command, value] = text.split(':')
-  if (!COMMAND_MAP[command]) {
+  if (command !== '' && !COMMAND_MAP[command]) {
     return res.status(200).json({
       response_type: 'ephemeral',
       text: `Sorry, searching by '${command}' is not supported`,
     })
   }
-  queryTasks({ [COMMAND_MAP[command]]: value })
+  const params = {}
+  if (COMMAND_MAP[command]){
+    params[COMMAND_MAP[command]] = value
+  }
+  queryTasks(params)
     .then(tasks => {
       return res.status(200).json({
         response_type: 'in_channel',

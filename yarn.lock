@@ -89,10 +89,10 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@eqworks/avail-bot@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@eqworks/avail-bot/-/avail-bot-1.0.0.tgz#2410316b2cf8174d0eaf634d97c4bda8e692f02b"
-  integrity sha512-jr8lWXywfEiVIPO64Phmke6i5h8ETktI0goJ+SvarfEbXajHodAoCGt6VLxom7yfmkTFqwcqtHQodsBCMSPvNg==
+"@eqworks/avail-bot@1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@eqworks/avail-bot/-/avail-bot-1.0.3.tgz#c20c6ea50fadbc3fd0d66f304be149a0835ba563"
+  integrity sha512-jzj1rEn4BmAO+eGXCy3QFeH6nDF+VEKWoYW2V2eeAjU+cUWUcSmjHtCMNJEvg9JqO4bfrVSiz9fpx+u4Imp5AA==
   dependencies:
     asana "^0.17.3"
 
