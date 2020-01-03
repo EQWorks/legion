@@ -10,6 +10,7 @@
     "tunnel": "ngrok http 8000"
   },
   "dependencies": {
+    "@eqworks/avail-bot": "^1.0.0",
     "@slack/interactive-messages": "^1.1.1",
     "@slack/web-api": "^5.0.1",
     "axios": "^0.18.0",
