@@ -1,0 +1,53 @@
+name: Serverless deployment - dev stage
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'dev-*'
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [10.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Set Node.js version
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache Node Modules
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+
+      - run: npm install -g serverless
+      - run: yarn install
+      - run: sls deploy --stage dev
+        env:
+          SLACK_BOT_TOKEN: ${{secrets.SLACK_BOT_TOKEN}}
+          SLACK_SIGNING_SECRET: ${{secrets.SLACK_SIGNING_SECRET}}
+          SLACK_OVERLORD_WEBHOOK: ${{secrets.SLACK_OVERLORD_WEBHOOK}}
+          SLACK_SNOKE_WEBHOOK: ${{secrets.SLACK_SNOKE_WEBHOOK}}
+          VID_COMP_API: ${{secrets.VID_COMP_API}}
+          GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
+          NETLIFY_TOKEN: ${{secrets.NETLIFY_TOKEN}}
+          SNOKE_MAINT_BUILD_HOOK: ${{secrets.SNOKE_MAINT_BUILD_HOOK}}
+          OVERLORD_MAINT_BUILD_HOOK: ${{secrets.OVERLORD_MAINT_BUILD_HOOK}}
+          YELP_API_KEY: ${{secrets.YELP_API_KEY}}
+          PGHOST: ${{secrets.PGHOST}}
+          PGDATABASE: ${{secrets.PGDATABASE}}
+          PGUSER: ${{secrets.PGUSER}}
+          PGPASSWORD: ${{secrets.PGPASSWORD}}
+          ASANA_TOKEN: ${{secrets:ASANA_TOKEN}}
