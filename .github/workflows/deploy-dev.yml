@@ -36,6 +36,10 @@ jobs:
       - run: yarn install
       - run: sls deploy --stage dev
         env:
+          # aws creds for deployment
+          AWS_ACCESS_KEY_ID: ${{secrets.aws_access_key_id}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.aws_secret_access_key}}
+          # legion required environment variables
           SLACK_BOT_TOKEN: ${{secrets.SLACK_BOT_TOKEN}}
           SLACK_SIGNING_SECRET: ${{secrets.SLACK_SIGNING_SECRET}}
           SLACK_OVERLORD_WEBHOOK: ${{secrets.SLACK_OVERLORD_WEBHOOK}}
@@ -50,4 +54,4 @@ jobs:
           PGDATABASE: ${{secrets.PGDATABASE}}
           PGUSER: ${{secrets.PGUSER}}
           PGPASSWORD: ${{secrets.PGPASSWORD}}
-          ASANA_TOKEN: ${{secrets:ASANA_TOKEN}}
+          ASANA_TOKEN: ${{secrets.ASANA_TOKEN}}
