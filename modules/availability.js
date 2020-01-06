@@ -12,7 +12,7 @@ const COMMAND_MAP = {
 
 router.all('/', verifySlack, (req, res, next) => {
   const { text = '' } = req.body || {}
-  const [command, value] = text.split(':')
+  const [command, value] = text.split(':').map(v => v.trim())
   if (command !== '' && !COMMAND_MAP[command]) {
     return res.status(200).json({
       response_type: 'ephemeral',
