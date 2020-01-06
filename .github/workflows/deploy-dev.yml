@@ -41,7 +41,7 @@ jobs:
           SLACK_OVERLORD_WEBHOOK: ${{secrets.SLACK_OVERLORD_WEBHOOK}}
           SLACK_SNOKE_WEBHOOK: ${{secrets.SLACK_SNOKE_WEBHOOK}}
           VID_COMP_API: ${{secrets.VID_COMP_API}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
           NETLIFY_TOKEN: ${{secrets.NETLIFY_TOKEN}}
           SNOKE_MAINT_BUILD_HOOK: ${{secrets.SNOKE_MAINT_BUILD_HOOK}}
           OVERLORD_MAINT_BUILD_HOOK: ${{secrets.OVERLORD_MAINT_BUILD_HOOK}}
