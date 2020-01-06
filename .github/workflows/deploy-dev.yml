@@ -50,4 +50,4 @@ jobs:
           PGDATABASE: ${{secrets.PGDATABASE}}
           PGUSER: ${{secrets.PGUSER}}
           PGPASSWORD: ${{secrets.PGPASSWORD}}
-          ASANA_TOKEN: ${{secrets:ASANA_TOKEN}}
+          ASANA_TOKEN: ${{secrets.ASANA_TOKEN}}
