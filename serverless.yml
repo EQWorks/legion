@@ -37,6 +37,7 @@ functions:
       PGDATABASE: ${env:PGDATABASE}
       PGUSER: ${env:PGUSER}
       PGPASSWORD: ${env:PGPASSWORD}
+      ASANA_TOKEN: ${env:ASANA_TOKEN}
     events:
       - http:
           path: /
