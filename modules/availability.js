@@ -50,7 +50,7 @@ router.all('/', verifySlack, (req, res, next) => {
         bySection[section].peepo.push({ text, name, routine })
       })
       return res.status(200).json({
-        response_type: 'in_channel',
+        response_type: 'ephemeral',
         blocks: [
           { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Dev Avail' } },
           ...[].concat.apply([], Object.values(bySection).map(({ text, peepo }) => ([
