@@ -1,15 +1,11 @@
-const AWS = require('aws-sdk')
-const express = require('express')
+const axios = require('axios')
 
-const { verifySlack } = require('./middleware')
+const { lambda, datapipeline, getFuncName } = require('./util')
 
-const datapipeline = new AWS.DataPipeline({ region: 'us-east-1' })
-const { PIPELINE_LIMIT = 300 } = process.env
-
-const router = express.Router()
+const { PIPELINE_LIMIT = 300, DEPLOYED = false } = process.env
 
 
-const count = async () => {
+const getCount = async () => {
   let count = 0
   let hasMoreResults = true
   let marker = ''
@@ -23,19 +19,38 @@ const count = async () => {
   return { count, limit: PIPELINE_LIMIT }
 }
 
-router.all('/', verifySlack, (_, res, next) => {
-  // const { text: command = 'count' } = body || {}
+const worker = async ({ response_url }) => {
+  const { count, limit } = await getCount()
+  return axios.post(response_url, {
+    replace_original: true,
+    text: `Pipeline usage: ${count}/${limit}`,
+  })
+}
 
-  // const r = {
-  //   response_type: 'ephemeral',
-  //   text: `Sorry, command ${command} not found`,
-  // }
-  count().then(({ count, limit }) => {
-    return res.status(200).json({
-      response_type: 'in_channel',
-      text: `Pipeline usage: ${count}/${limit}`,
+
+const route = ({ response_url }, res) => {
+  if (DEPLOYED) {
+    lambda.invoke({
+      FunctionName: getFuncName('pipeline'),
+      InvocationType: 'Event',
+      Payload: JSON.stringify({ response_url }),
+    }, (err) => {
+      if (err) {
+        console.error(err)
+        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to check' })
+      }
+      return res.status(200).json({
+        response_type: 'ephemeral',
+        text: 'Checking pipeline usage...',
+      })
     })
-  }).catch(next)
-})
+  } else {
+    worker({ response_url }).catch(console.error)
+    return res.status(200).json({
+      response_type: 'ephemeral',
+      text: 'Checking pipeline usage...',
+    })
+  }
+}
 
-module.exports = router
+module.exports = { worker, route}

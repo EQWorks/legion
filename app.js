@@ -3,20 +3,14 @@ const serverless = require('serverless-http')
 const bodyParser = require('body-parser')
 const axios = require('axios')
 
-const maintenance = require('./modules/maintenance')
-const deploy = require('./modules/deploy')
-const report = require('./modules/report')
+
+const { verifySlack } = require('./modules/middleware')
 const diff = require('./modules/diff')
 const food = require('./modules/food')
-const boardroom = require('./modules/boardroom')
-const interactive = require('./modules/interactive')
 const pipeline = require('./modules/pipeline')
 const availability = require('./modules/availability')
 
-
 const app = express()
-
-app.use('/interactive', interactive.requestListener())
 
 const rawBodyBuffer = (req, _, buf, encoding) => {
   if (buf && buf.length) {
@@ -32,13 +26,9 @@ app.get('/', (_, res, next) => {
 })
 
 // secondary prefix for backward compat
-app.use(['/report', '/'], report)
-app.use('/maintenance', maintenance)
-app.use('/deploy', deploy)
-app.use('/diff', diff)
-app.use('/food', food)
-app.use('/boardroom', boardroom)
-app.use('/pipeline', pipeline)
+app.use('/diff', verifySlack, diff.route)
+app.use('/food', verifySlack, food.route)
+app.use('/pipeline', verifySlack, pipeline.route)
 app.use('/avail', availability)
 
 // catch-all error handler

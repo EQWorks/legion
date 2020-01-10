@@ -4,7 +4,6 @@ provider:
   name: aws
   runtime: nodejs12.x
   timeout: 30
-  stage: dev
   region: us-east-1
   memorySize: 256
   versionFunctions: false # temp work around for provisionedConcurrency
@@ -19,27 +18,21 @@ provider:
     subnetIds:
       - subnet-b59ae9fe # EQ-DC-Lambda Public 1A
       - subnet-df12bb82 # EQ-DC-Lambda Public 1B
+  # TODO: move these to specific functions below once re-arch is done
+  environment:
+    DEPLOYED: true
+    STAGE: ${opt:stage, self:provider.stage}
+    SLACK_SIGNING_SECRET: ${env:SLACK_SIGNING_SECRET}
+    GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+    NETLIFY_TOKEN: ${env:NETLIFY_TOKEN}
+    YELP_API_KEY: ${env:YELP_API_KEY}
+    ASANA_TOKEN: ${env:ASANA_TOKEN}
 
 functions:
-  legion:
+  # Express.js based entry points API server
+  entry:
     handler: app.handler
     provisionedConcurrency: 1
-    environment:
-      SLACK_BOT_TOKEN: ${env:SLACK_BOT_TOKEN}
-      SLACK_SIGNING_SECRET: ${env:SLACK_SIGNING_SECRET}
-      SLACK_OVERLORD_WEBHOOK: ${env:SLACK_OVERLORD_WEBHOOK}
-      SLACK_SNOKE_WEBHOOK: ${env:SLACK_SNOKE_WEBHOOK}
-      VID_COMP_API: ${env:VID_COMP_API}
-      GITHUB_TOKEN: ${env:GITHUB_TOKEN}
-      NETLIFY_TOKEN: ${env:NETLIFY_TOKEN}
-      SNOKE_MAINT_BUILD_HOOK: ${env:SNOKE_MAINT_BUILD_HOOK}
-      OVERLORD_MAINT_BUILD_HOOK: ${env:OVERLORD_MAINT_BUILD_HOOK}
-      YELP_API_KEY: ${env:YELP_API_KEY}
-      PGHOST: ${env:PGHOST}
-      PGDATABASE: ${env:PGDATABASE}
-      PGUSER: ${env:PGUSER}
-      PGPASSWORD: ${env:PGPASSWORD}
-      ASANA_TOKEN: ${env:ASANA_TOKEN}
     events:
       - http:
           path: /
@@ -49,3 +42,8 @@ functions:
           path: '{proxy+}'
           method: ANY
           cors: true
+  # specific workers below
+  food:
+    handler: worker.food
+  diff:
+    handler: worker.diff
