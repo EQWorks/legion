@@ -2,7 +2,7 @@ service: legion
 
 provider:
   name: aws
-  runtime: nodejs10.x
+  runtime: nodejs12.x
   timeout: 30
   stage: dev
   region: us-east-1
