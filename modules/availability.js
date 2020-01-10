@@ -12,9 +12,27 @@ const COMMAND_MAP = {
   section: 'sectionName',
 }
 
+const SECTIONS = ['remote', 'vacation', 'in office']
+// https://o1u4dgxs7a.execute-api.us-east-1.amazonaws.com/dev/avail
 router.all('/', verifySlack, (req, res, next) => {
   const { text = '' } = req.body || {}
-  const [command, value] = text.split(':').map(v => v.trim())
+  // /avail (gets all)
+  // /avail user:[name]
+  // /avail section:[section]
+  // /avail [section | name] checks ENUM first then assumes it's a name and checks
+  // provide feedback in response e.g. "Checking availability for section: In Office"
+  let command = ''
+  let value
+  if (text.indexOf(':') > 0) {
+    ([command, value] = text.split(':').map(v => v.trim()))
+  } else if (text !== '') {
+    if(SECTIONS.includes(text)) {
+      command = 'section'
+    } else {
+      command = 'user'
+    }
+    value = text
+  }
   if (command !== '' && !COMMAND_MAP[command]) {
     return res.status(200).json({
       response_type: 'ephemeral',
