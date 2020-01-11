@@ -28,7 +28,7 @@ const worker = async ({ response_url }) => {
 }
 
 
-const route = ({ response_url }, res) => {
+const route = ({ body: { response_url } }, res) => {
   if (DEPLOYED) {
     lambda.invoke({
       FunctionName: getFuncName('pipeline'),
