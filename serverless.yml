@@ -33,6 +33,7 @@ functions:
   # Express.js based entry points API server
   entry:
     handler: app.handler
+    # keep this hot for immediate slack response
     provisionedConcurrency: 1
     events:
       - http:
