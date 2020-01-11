@@ -9,3 +9,5 @@ module.exports.lambda = new AWS.Lambda({
 })
 
 module.exports.getFuncName = f => `legion-${STAGE}-${f}`
+
+module.exports.datapipeline = new AWS.DataPipeline({ region: 'us-east-1' })
