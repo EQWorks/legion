@@ -11,6 +11,7 @@ provider:
     - Effect: "Allow"
       Action:
         - "datapipeline:ListPipelines"
+        - "lambda:InvokeFunction"
       Resource: "*"
   vpc: # vpc-70658509 | EQ-DC-Tunnel
     securityGroupIds:
@@ -47,3 +48,5 @@ functions:
     handler: worker.food
   diff:
     handler: worker.diff
+  pipeline:
+    handler: worker.pipeline
