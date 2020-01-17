@@ -13,6 +13,7 @@ const worker = async ({ response_url, ...params }) => {
     headers: { Authorization: `Bearer ${YELP_API_KEY}` },
     params,
   })
+  const { max, radius, location, term } = params
 
   if (!total) {
     return axios.post(response_url, {
@@ -28,7 +29,6 @@ const worker = async ({ response_url, ...params }) => {
       ],
     })
   }
-  const { max, radius, location, term } = params
   const info = sampleSize(businesses, max).map((b) => ([
     {
       type: 'section',
@@ -90,14 +90,13 @@ const route = (req, res) => {
     location = 'EQ Works',
     radius = 1000,
     max = 3,
-    open_now = true,
   ] = (text || 'lunch').split(',').map(p => p.trim())
 
   if (term === '') {
     return res.status(200).json({ text: '`term` cannot be empty', mrkdwn: true })
   }
 
-  const payload = { term, location, radius, max, open_now, response_url }
+  const payload = { term, location, radius, max, response_url, open_now: true }
 
   if (DEPLOYED) {
     lambda.invoke({
