@@ -1,10 +1,9 @@
-const express = require('express')
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
 
-const { verifySlack } = require('./middleware')
+const { lambda, getFuncName } = require('./util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 10, NETLIFY_TOKEN } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 10, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
 
 // TODO: only supports 2-stage comparison for now
@@ -37,8 +36,6 @@ const CLIENTS = {
     head: 'master',
   },
 }
-
-const router = express.Router()
 
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
@@ -152,27 +149,48 @@ const getClientMeta = async (product) => {
   return { head, base, dev, prod }
 }
 
-
-router.all('/', verifySlack, async (req, res, next) => {
-  const { text: product = 'firstorder' } = req.body || {}
-
-  try {
-    let r = {
-      response_type: 'ephemeral',
-      text: `Sorry, product ${product} not found`,
-    }
-
-    if (Object.keys(SERVICES).includes(product)) {
-      r = await getGitDiff({ product, ...await getServiceMeta(product) })
-    } else if (Object.keys(CLIENTS).includes(product)) {
-      r = await getGitDiff({ product, ...await getClientMeta(product) })
-    }
-
-    return res.status(200).json(r)
-  } catch(err) {
-    return next(err)
+const worker = async ({ product, response_url }) => {
+  let r = {
+    response_type: 'ephemeral',
+    text: `Sorry, product ${product} not found`,
   }
-})
 
+  if (Object.keys(SERVICES).includes(product)) {
+    r = await getGitDiff({ product, ...await getServiceMeta(product) })
+  } else if (Object.keys(CLIENTS).includes(product)) {
+    r = await getGitDiff({ product, ...await getClientMeta(product) })
+  }
 
-module.exports = router
+  return axios.post(response_url, { replace_original: true, ...r })
+}
+
+const route = (req, res) => {
+  const { text: product = 'firstorder', response_url } = req.body || {}
+
+  const payload = { product, response_url }
+
+  if (DEPLOYED) {
+    lambda.invoke({
+      FunctionName: getFuncName('diff'),
+      InvocationType: 'Event',
+      Payload: JSON.stringify(payload),
+    }, (err) => {
+      if (err) {
+        console.error(err)
+        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to diff' })
+      }
+      return res.status(200).json({
+        response_type: 'ephemeral',
+        text: `Diffing for ${product}...`,
+      })
+    })
+  } else {
+    worker(payload).catch(console.error)
+    return res.status(200).json({
+      response_type: 'ephemeral',
+      text: `Diffing for ${product}...`,
+    })
+  }
+}
+
+module.exports = { worker, route }

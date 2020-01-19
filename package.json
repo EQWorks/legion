@@ -12,21 +12,16 @@
   },
   "dependencies": {
     "@eqworks/avail-bot": "1.0.3",
-    "@slack/interactive-messages": "^1.1.1",
-    "@slack/web-api": "^5.0.1",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
     "lodash.samplesize": "^4.2.0",
-    "moment-timezone": "^0.5.25",
     "netlify": "^2.4.6",
-    "pg": "^7.11.0",
     "serverless-http": "^2.0.2",
-    "shortid": "^2.2.14",
     "tsscmp": "^1.0.6"
   },
   "engines": {
-    "node": "10.x"
+    "node": "12.x"
   },
   "repository": {
     "url": "https://glitch.com/edit/#!/welcome-project"
