@@ -13,6 +13,7 @@ const worker = async ({ response_url, ...params }) => {
     headers: { Authorization: `Bearer ${YELP_API_KEY}` },
     params,
   })
+  const { max, radius, location, term } = params
 
   if (!total) {
     return axios.post(response_url, {
@@ -28,7 +29,6 @@ const worker = async ({ response_url, ...params }) => {
       ],
     })
   }
-  const { max, radius, location, term } = params
   const info = sampleSize(businesses, max).map((b) => ([
     {
       type: 'section',
@@ -37,9 +37,9 @@ const worker = async ({ response_url, ...params }) => {
         text: [
           `*<${b.url}|${b.name}>*`,
           `${b.location.display_address.join(' ')}\n`,
-          `Rating: ${b.rating} on Yelp`,
-          `Price: ${b.price}`,
-        ].join('\n'),
+          (b.categories || []).map(c => `_${c.title}_`).join(', '),
+          b.display_phone || '',
+        ].filter(p => p).join('\n'),
       },
       accessory: {
         type: 'image',
@@ -57,27 +57,32 @@ const worker = async ({ response_url, ...params }) => {
         },
         {
           'type': 'plain_text',
-          'text': `${b.review_count} reviews`,
+          'text': `${b.rating}/5 from ${b.review_count} reviews`,
+          'emoji': true,
+        },
+        {
+          'type': 'plain_text',
+          'text': ((b.price || '').match(/\$/g) || []).map(() => ':moneybag:').join('') || ':question:',
+          'emoji': true,
+        },
+        {
+          'type': 'plain_text',
+          'text': `:fry-walk: ${Math.round(b.distance)}m`,
           'emoji': true,
         },
       ],
     },
     { type: 'divider' },
   ]))
+  const text = `\`${max}/${total}\` restaurants within ${radius}m around ${location} were sampled using the term: *${term}*`
   return axios.post(response_url, {
     response_type: 'in_channel',
     replace_original: true,
+    text,
     blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `\`${max}/${total}\` restaurants within ${radius}m around ${location} were sampled using the term: *${term}*`,
-        },
-      },
+      { type: 'section', text: { type: 'mrkdwn', text } },
       { type: 'divider' },
-      // TODO: Array.prototype.flat not avail in Node until v11+
-      ...[].concat.apply([], info),
+      ...info.flat(),
     ],
   })
 }
@@ -89,15 +94,14 @@ const route = (req, res) => {
     term,
     location = 'EQ Works',
     radius = 1000,
-    max = 3,
-    open_now = true,
+    max = 5,
   ] = (text || 'lunch').split(',').map(p => p.trim())
 
   if (term === '') {
     return res.status(200).json({ text: '`term` cannot be empty', mrkdwn: true })
   }
 
-  const payload = { term, location, radius, max, open_now, response_url }
+  const payload = { term, location, radius, max, response_url, open_now: true }
 
   if (DEPLOYED) {
     lambda.invoke({
