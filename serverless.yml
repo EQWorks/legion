@@ -51,3 +51,6 @@ functions:
     handler: worker.diff
   pipeline:
     handler: worker.pipeline
+  avail:
+    handler: worker.avail
+
