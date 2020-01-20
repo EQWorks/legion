@@ -95,7 +95,7 @@ const route = (req, res) => {
   const payload = { command, value, response_url }
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('food'),
+      FunctionName: getFuncName('avail'),
       InvocationType: 'Event',
       Payload: JSON.stringify(payload),
     }, (err) => {
