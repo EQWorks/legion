@@ -29,7 +29,7 @@ app.get('/', (_, res, next) => {
 app.use('/diff', verifySlack, diff.route)
 app.use('/food', verifySlack, food.route)
 app.use('/pipeline', verifySlack, pipeline.route)
-app.use('/avail', availability)
+app.use('/avail', verifySlack, availability.route)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors

@@ -1,22 +1,23 @@
-const express = require('express')
+const axios = require('axios')
 const { queryTasks } = require('@eqworks/avail-bot')
-const { verifySlack } = require('./middleware')
+const { lambda, getFuncName  } = require('./util')
 
+const { DEPLOYED = false } = process.env
 const ASANA_LINK = 'https://app.asana.com/0/1152701043959235/timeline'
-
-
-const router = express.Router()
-
 const COMMAND_MAP = {
   user: 'userName',
   section: 'sectionName',
 }
+const SECTIONS = ['remote', 'vacation', 'in office']
 
-router.all('/', verifySlack, (req, res, next) => {
-  const { text = '' } = req.body || {}
-  const [command, value] = text.split(':').map(v => v.trim())
+const worker = async ({ response_url, command, value }) => {
+  // /avail (gets all)
+  // /avail user:[name]
+  // /avail section:[section]
+  // /avail [section | name] checks ENUM first then assumes it's a name and checks
+  // provide feedback in response e.g. "Checking availability for section: In Office"
   if (command !== '' && !COMMAND_MAP[command]) {
-    return res.status(200).json({
+    return axios.post(response_url, {
       response_type: 'ephemeral',
       text: `Sorry, searching by '${command}' is not supported`,
     })
@@ -49,7 +50,7 @@ router.all('/', verifySlack, (req, res, next) => {
         }
         bySection[section].peepo.push({ text, name, routine })
       })
-      return res.status(200).json({
+      return axios.post(response_url, {
         response_type: 'ephemeral',
         blocks: [
           { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Dev Avail' } },
@@ -74,8 +75,41 @@ router.all('/', verifySlack, (req, res, next) => {
         ],
       })
     })
-    .catch(next)
-})
+}
+
+const route = (req, res) => {
+  const { text = '', response_url } = req.body
+
+  let command = ''
+  let value
+  if (text.indexOf(':') > 0) {
+    ([command, value] = text.split(':').map(v => v.trim()))
+  } else if (text !== '') {
+    if(SECTIONS.includes(text)) {
+      command = 'section'
+    } else {
+      command = 'user'
+    }
+    value = text
+  }
+  const payload = { command, value, response_url }
+  if (DEPLOYED) {
+    lambda.invoke({
+      FunctionName: getFuncName('food'),
+      InvocationType: 'Event',
+      Payload: JSON.stringify(payload),
+    }, (err) => {
+      if (err) {
+        console.error(err)
+        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to check availability' })
+      }
+      return res.status(200).json({ response_type: 'ephemeral', text: 'Checking Dev Availability...' })
+    })
+  } else {
+    worker(payload).catch(console.error)
+    return res.status(200).json({ response_type: 'ephemeral', text: 'Checking Dev Availability...' })
+  }
+}
 
 
-module.exports = router
+module.exports = { worker, route }
