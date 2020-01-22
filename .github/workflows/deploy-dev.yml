@@ -42,16 +42,7 @@ jobs:
           # legion required environment variables
           SLACK_BOT_TOKEN: ${{secrets.SLACK_BOT_TOKEN}}
           SLACK_SIGNING_SECRET: ${{secrets.SLACK_SIGNING_SECRET}}
-          SLACK_OVERLORD_WEBHOOK: ${{secrets.SLACK_OVERLORD_WEBHOOK}}
-          SLACK_SNOKE_WEBHOOK: ${{secrets.SLACK_SNOKE_WEBHOOK}}
-          VID_COMP_API: ${{secrets.VID_COMP_API}}
           GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
           NETLIFY_TOKEN: ${{secrets.NETLIFY_TOKEN}}
-          SNOKE_MAINT_BUILD_HOOK: ${{secrets.SNOKE_MAINT_BUILD_HOOK}}
-          OVERLORD_MAINT_BUILD_HOOK: ${{secrets.OVERLORD_MAINT_BUILD_HOOK}}
           YELP_API_KEY: ${{secrets.YELP_API_KEY}}
-          PGHOST: ${{secrets.PGHOST}}
-          PGDATABASE: ${{secrets.PGDATABASE}}
-          PGUSER: ${{secrets.PGUSER}}
-          PGPASSWORD: ${{secrets.PGPASSWORD}}
           ASANA_TOKEN: ${{secrets.ASANA_TOKEN}}
