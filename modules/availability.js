@@ -52,8 +52,8 @@ const worker = async ({ response_url, command, value }) => {
   return axios.post(response_url, {
     response_type: 'ephemeral',
     blocks: [
-      { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Dev Avail' } },
-      ...[].concat.apply([], Object.values(bySection).map(({ text, peepo }) => ([
+      { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Team Avail' } },
+      ...Object.values(bySection).map(({ text, peepo }) => ([
         { type: 'section', text: { type: 'plain_text', emoji: true, text } },
         {
           type: 'context',
@@ -62,7 +62,7 @@ const worker = async ({ response_url, command, value }) => {
             text: `${name}${routine ? ' (Routine)' : ''}`,
           })),
         },
-      ]))),
+      ])).flat(),
       { type: 'divider' },
       {
         type: 'context',
