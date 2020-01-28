@@ -55,13 +55,21 @@ const worker = async ({ response_url, command, value }) => {
       { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Team Avail' } },
       ...Object.values(bySection).map(({ text, peepo }) => ([
         { type: 'section', text: { type: 'plain_text', emoji: true, text } },
-        {
-          type: 'context',
-          elements: peepo.map(({ name, routine }) => ({
-            type: 'plain_text',
-            text: `${name}${routine ? ' (Routine)' : ''}`,
-          })),
-        },
+        ...peepo.map(({ name, routine }) => ({
+          type: 'plain_text',
+          text: `${name}${routine ? ' (Routine)' : ''}`,
+        })).reduce((chunk, item, index) => {
+          // working around 10 element limit from Slack Block
+          const chunkIndex = Math.floor(index / 10)
+
+          if (!chunk[chunkIndex]) {
+            chunk[chunkIndex] = { type: 'context', elements: [] }
+          }
+
+          chunk[chunkIndex].elements.push(item)
+
+          return chunk
+        }, []),
       ])).flat(),
       { type: 'divider' },
       {
