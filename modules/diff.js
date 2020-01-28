@@ -106,13 +106,13 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
         text: {
           type: 'mrkdwn',
           text: `
-            *${product}* \`${dev}\` is ${status} by ${total_commits} compared to \`${prod}\`
+            *${product}* \`${dev}\` is ${status} by ${total_commits} commits compared to \`${prod}\`
             ${info.length > COMMIT_LIMIT ? `\n${COMMIT_LIMIT}/${info.length} most recent commits shown below` : ''}
           `.trim(),
         },
         accessory: {
           type: 'button',
-          text: { type: 'plain_text', text: `${base}...${head}` },
+          text: { type: 'plain_text', text: 'All Changes' },
           url: html_url,
           value: `${base}...${head}`,
         },
