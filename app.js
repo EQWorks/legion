@@ -25,11 +25,16 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
+
+if (process.env.DEPLOYED) {
+  app.use(verifySlack)
+}
+
 // secondary prefix for backward compat
-app.use('/diff', verifySlack, diff.route)
-app.use('/food', verifySlack, food.route)
-app.use('/pipeline', verifySlack, pipeline.route)
-app.use('/avail', verifySlack, availability.route)
+app.use('/diff', diff.route)
+app.use('/food', food.route)
+app.use('/pipeline', pipeline.route)
+app.use('/avail', availability.route)
 
 // catch-all error handler
 // eslint disable otherwise not able to catch errors
