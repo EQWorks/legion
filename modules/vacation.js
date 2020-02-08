@@ -83,6 +83,7 @@ const worker = async ({ response_url, command, value }) => {
     if (status === 'Pending') {
       return {}
     }
+    // include Approve and Pending for Confirmed By Employee
     return {
       "accessory": {
         "type": "button",
