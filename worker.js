@@ -4,6 +4,16 @@ const pipeline = require('./modules/pipeline')
 const avail = require('./modules/availability')
 const vacay = require('./modules/vacation')
 
+// const modules = require('./modules')
+
+// module.exports = {
+//   ...Object.entries(modules).reduce((agg, [uri, { worker }]) => {
+//     agg[uri] = async (event) => {
+//       await worker(event)
+//       return { statusCode: 200 }
+//     }
+//   }, {})
+// }
 
 module.exports.diff = async (event) => {
   await diff.worker(event)

@@ -9,5 +9,5 @@ module.exports = {
   food,
   pipeline,
   avail,
-  vacay
+  vacay,
 }
