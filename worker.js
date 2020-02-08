@@ -2,6 +2,7 @@ const diff = require('./modules/diff')
 const food = require('./modules/food')
 const pipeline = require('./modules/pipeline')
 const avail = require('./modules/availability')
+const vacay = require('./modules/vacation')
 
 
 module.exports.diff = async (event) => {
@@ -21,5 +22,10 @@ module.exports.pipeline = async (event) => {
 
 module.exports.avail = async (event) => {
   await avail.worker(event)
+  return { statusCode: 200 }
+}
+
+module.exports.vacay = async (event) => {
+  await vacay.worker(event)
   return { statusCode: 200 }
 }

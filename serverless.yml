@@ -53,3 +53,5 @@ functions:
     handler: worker.pipeline
   avail:
     handler: worker.avail
+  vacay:
+    handler: worker.vacay
