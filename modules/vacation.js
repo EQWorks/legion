@@ -26,12 +26,26 @@ const worker = async ({ response_url, command, value }) => {
   // if (COMMAND_MAP[command]){
   //   params[COMMAND_MAP[command]] = value
   // }
+  // const params = {
+  //   sectionName: 'vacation',
+  //   now: false,
+  //   rawParams: {
+  //     opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields',
+  //     completed: false,
+  //   },
+  //   // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
+  // }
+  // const tasks = await getTasksForProject(params)
+  const date = new Date()
+  date.setYear(date.getFullYear() - 1)
   const params = {
     sectionName: 'vacation',
     now: false,
     rawParams: {
       opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields',
-      completed: false,
+      // completed: false,
+      completed: true,
+      'due_on.after': date.toISOString().substring(0, 4) + '-12-31'
     },
     // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
   }
@@ -77,12 +91,17 @@ const worker = async ({ response_url, command, value }) => {
       text: 'Approve',
       gid: statusTask.enum_options.find(o => o.name === 'Approved').gid,
       style: 'primary',
+    },
+    'Pending': {
+      text: 'Confirm',
+      gid: statusTask.enum_options.find(o => o.name === 'Confirmed by Employee').gid,
+      style: 'primary',
     }
   }
   const getStatusButton = (status, gid) => {
-    if (status === 'Pending') {
-      return {}
-    }
+    // if (status === 'Pending') {
+    //   return {}
+    // }
     // include Approve and Pending for Confirmed By Employee
     return {
       "accessory": {
@@ -93,7 +112,7 @@ const worker = async ({ response_url, command, value }) => {
           "text": `${statusMap[status].text}`,
         },
         "style": `${statusMap[status].style}`,
-        "value": `${gid} // ${statusTask.gid} // ${statusMap[status].gid}`
+        "value": `vacay // ${gid} // ${statusTask.gid} // ${statusMap[status].gid}`
       }
     }
   }
@@ -166,3 +185,71 @@ const route = (req, res) => {
 
 
 module.exports = { worker, route }
+
+/*
+{
+  gid: '1159688855982005',
+  resource_type: 'task',
+  created_at: '2020-01-30T19:34:44.389Z',
+  modified_at: '2020-02-15T01:22:12.955Z',
+  name: 'Vacation: Shane (test)',
+  notes: 'Cambodia broooooo',
+  assignee: {
+    gid: '1144464613086028',
+    resource_type: 'user',
+    name: 'Shane Stratton'
+  },
+  completed: false,
+  assignee_status: 'inbox',
+  completed_at: null,
+  due_on: '2020-02-21',
+  due_at: null,
+  projects: [
+    {
+      gid: '1152701043959235',
+      resource_type: 'project',
+      name: 'Dev Avail'
+    }
+  ],
+  resource_subtype: 'default_task',
+  start_on: '2020-02-17',
+  tags: [],
+  workspace: {
+    gid: '30686770106337',
+    resource_type: 'workspace',
+    name: 'eqworks.com'
+  },
+  num_hearts: 0,
+  num_likes: 0,
+  parent: null,
+  hearted: false,
+  hearts: [],
+  liked: false,
+  likes: [],
+  followers: [
+    {
+      gid: '1144464613086028',
+      resource_type: 'user',
+      name: 'Shane Stratton'
+    },
+    {
+      gid: '30686744339484',
+      resource_type: 'user',
+      name: 'Dilshan Kathriarachchi'
+    }
+  ],
+  memberships: [ { project: [Object], section: [Object] } ],
+  custom_fields: [
+    {
+      gid: '1159688855981996',
+      name: 'Status',
+      type: 'enum',
+      enum_value: [Object],
+      enum_options: [Array],
+      enabled: true
+    }
+  ]
+}
+
+
+*/
