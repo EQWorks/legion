@@ -44,6 +44,5 @@ functions:
           path: '{proxy+}'
           method: ANY
           cors: true
-  # generic work
   slack:
     handler: slack-worker.handler
