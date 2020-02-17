@@ -45,79 +45,93 @@ const worker = async ({ response_url, command, value }) => {
       opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields',
       // completed: false,
       completed: true,
-      'due_on.after': date.toISOString().substring(0, 4) + '-12-31'
+      'due_on.after': date.getFullYear() + '-12-31'
     },
     // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
   }
   const tasks = await getTasksForProject(params)
-  console.log(tasks[1])
-  const statusTask = tasks[0].custom_fields.find(o => o.name === 'Status')
-  const byStatus = tasks.reduce((agg, t) => {
+  const byUser = tasks.reduce((agg, t) => {
     const {
-      assignee: { gid: userId, name },
-      notes,
-      custom_fields,
+      assignee: { name },
       start_on,
       due_on,
-      gid,
     } = t
+    // TODO: handle Status (e.g. what if it was complete, but Pending)
     // if start_on, then it's a duration, else 1 day
-    const status = custom_fields.find(o => o.name === 'Status')
-    if (status.enum_value) {
-      if (!agg[status.enum_value.name]) {
-        agg[status.enum_value.name] = []
-      }
-      agg[status.enum_value.name].push({
-        gid,
-        userId,
-        date: start_on ? `${start_on} - ${due_on}` : due_on,
-        name,
-        notes,
-      })
-    }
+    console.log('---> ', name, start_on, due_on)
+    agg[name] = (agg[name] || 0) + (start_on ? (
+      (new Date(due_on.replace('-','/')).getTime() - Math.max(new Date(date.getFullYear() + '/12/31').getTime(), new Date(start_on.replace('-','/')).getTime())) / (1000*60*60*24)) : 1)
     return agg
   }, {})
+  // console.log(byUser)
+  // const statusTask = tasks[0].custom_fields.find(o => o.name === 'Status')
+  // const byStatus = tasks.reduce((agg, t) => {
+  //   const {
+  //     assignee: { gid: userId, name },
+  //     notes,
+  //     custom_fields,
+  //     start_on,
+  //     due_on,
+  //     gid,
+  //   } = t
+  //   // if start_on, then it's a duration, else 1 day
+  //   const status = custom_fields.find(o => o.name === 'Status')
+  //   // this filters unset ('-') tasks
+  //   if (status.enum_value) {
+  //     if (!agg[status.enum_value.name]) {
+  //       agg[status.enum_value.name] = []
+  //     }
+  //     agg[status.enum_value.name].push({
+  //       gid,
+  //       userId,
+  //       date: start_on ? `${start_on} - ${due_on}` : due_on,
+  //       name,
+  //       notes,
+  //     })
+  //   }
+  //   return agg
+  // }, {})
   /*
     'Approved': [...tasks],
     '': []
   */
-  const statusMap = {
-    'Approved': {
-      text: 'Set Pending',
-      gid: statusTask.enum_options.find(o => o.name === 'Pending').gid,
-      style: 'danger',
-    },
-    'Confirmed by Employee': {
-      text: 'Approve',
-      gid: statusTask.enum_options.find(o => o.name === 'Approved').gid,
-      style: 'primary',
-    },
-    'Pending': {
-      text: 'Confirm',
-      gid: statusTask.enum_options.find(o => o.name === 'Confirmed by Employee').gid,
-      style: 'primary',
-    }
-  }
-  const getStatusButton = (status, gid) => {
-    // if (status === 'Pending') {
-    //   return {}
-    // }
-    // include Approve and Pending for Confirmed By Employee
-    return {
-      "accessory": {
-        "type": "button",
-        "text": {
-          "type": "plain_text",
-          "emoji": true,
-          "text": `${statusMap[status].text}`,
-        },
-        "style": `${statusMap[status].style}`,
-        "value": `vacay // ${gid} // ${statusTask.gid} // ${statusMap[status].gid}`
-      }
-    }
-  }
+  // const statusMap = {
+  //   'Approved': {
+  //     text: 'Set Pending',
+  //     gid: statusTask.enum_options.find(o => o.name === 'Pending').gid,
+  //     style: 'danger',
+  //   },
+  //   'Confirmed by Employee': {
+  //     text: 'Approve',
+  //     gid: statusTask.enum_options.find(o => o.name === 'Approved').gid,
+  //     style: 'primary',
+  //   },
+  //   'Pending': {
+  //     text: 'Confirm',
+  //     gid: statusTask.enum_options.find(o => o.name === 'Confirmed by Employee').gid,
+  //     style: 'primary',
+  //   }
+  // }
+  // const getStatusButton = (status, gid) => {
+  //   // if (status === 'Pending') {
+  //   //   return {}
+  //   // }
+  //   // include Approve and Pending for Confirmed By Employee
+  //   return {
+  //     "accessory": {
+  //       "type": "button",
+  //       "text": {
+  //         "type": "plain_text",
+  //         "emoji": true,
+  //         "text": `${statusMap[status].text}`,
+  //       },
+  //       "style": `${statusMap[status].style}`,
+  //       "value": `vacay // ${gid} // ${statusTask.gid} // ${statusMap[status].gid}`
+  //     }
+  //   }
+  // }
   return axios.post(response_url, {
-    response_type: 'ephemeral',
+    response_type: 'in_channel',
     blocks: [
       {
         "type": "section",
@@ -127,24 +141,33 @@ const worker = async ({ response_url, command, value }) => {
         }
       },
       { "type": "divider" },
-      ...Object.entries(byStatus).map(([status, entries]) => ([
+      ...Object.entries(byUser).map(([user, total]) => (
         {
           "type": "section",
           "text": {
             "type": "mrkdwn",
-            "text": `_${status}_`
+            "text": `*${user}*: ${total}`,
           }
-        },
-        ...entries.map(({ name, notes, date, gid }) => ({
-          "type": "section",
-          "text": {
-            "type": "mrkdwn",
-            "text": `*${name}:* ${date}\n${notes}`
-          },
-          ...getStatusButton(status, gid)
-        })),
-        { type: 'divider' },
-      ])).flat(),
+        }
+      ))
+      // ...Object.entries(byStatus).map(([status, entries]) => ([
+      //   {
+      //     "type": "section",
+      //     "text": {
+      //       "type": "mrkdwn",
+      //       "text": `_${status}_`
+      //     }
+      //   },
+      //   ...entries.map(({ name, notes, date, gid }) => ({
+      //     "type": "section",
+      //     "text": {
+      //       "type": "mrkdwn",
+      //       "text": `*${name}:* ${date}\n${notes}`
+      //     },
+      //     ...getStatusButton(status, gid)
+      //   })),
+      //   { type: 'divider' },
+      // ])).flat(),
     ],
   })
 }
