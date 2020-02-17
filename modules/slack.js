@@ -1,7 +1,48 @@
 const axios = require('axios')
+const { WebClient } = require('@slack/web-api')
 const { lambda, getFuncName  } = require('./util')
 
 const { DEPLOYED = false } = process.env
+
+const token = process.env.SLACK_TOKEN || 'xoxp-49467158547-461844741777-914376058981-a4d375517e47575d8321643bb68ae0f9'
+const web = new WebClient(token)
+
+const conversationId = 'CCCB6QD9S';
+
+(async () => {
+
+  // Post a message to the channel, and await the result.
+  // Find more arguments and details of the response: https://api.slack.com/methods/chat.postMessage
+  // const result = await web.chat.postMessage({
+  //   text: 'Hello world!',
+  //   channel: conversationId,
+  // })
+  // const result = await web.apiCall('search.messages',{
+  //   query: 'thread: !!## in:bot-cmd from:shane.stratton on:2/15/2020',
+  // })
+  const result = await web.search.messages({
+    query: '!!##thread: <so-so-so-unique>',
+  })
+
+  const post = await web.chat.postEphemeral({
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `\`\`\`${JSON.stringify(result.messages.matches.filter(msg => !msg.previous).map(msg => msg.text))}\`\`\``
+        },
+      }
+    ],
+    user: 'UDKQUMTNV',
+    channel: conversationId,
+  })
+  // The result contains an identifier for the message, `ts`.
+  // thread messages normally use thread_ts
+  // search.messages does not return this
+  // .previous seems to indicate a child
+  console.log(result.messages.matches.filter(msg => !msg.previous).map(msg => msg.text))
+})()
 
 const worker = async ({ response_url, command, value }) => {
 
