@@ -4,81 +4,92 @@ const { lambda, getFuncName  } = require('./util')
 
 const { DEPLOYED = false } = process.env
 
-const token = process.env.SLACK_TOKEN || 'xoxp-49467158547-461844741777-914376058981-a4d375517e47575d8321643bb68ae0f9'
+const token = process.env.SLACK_OAUTH
 const web = new WebClient(token)
 
-const conversationId = 'CCCB6QD9S';
 
-(async () => {
-
-  // Post a message to the channel, and await the result.
-  // Find more arguments and details of the response: https://api.slack.com/methods/chat.postMessage
-  // const result = await web.chat.postMessage({
-  //   text: 'Hello world!',
-  //   channel: conversationId,
-  // })
-  // const result = await web.apiCall('search.messages',{
-  //   query: 'thread: !!## in:bot-cmd from:shane.stratton on:2/15/2020',
-  // })
-  const result = await web.search.messages({
-    query: '!!##thread: <so-so-so-unique>',
-  })
-
-  const post = await web.chat.postEphemeral({
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `\`\`\`${JSON.stringify(result.messages.matches.filter(msg => !msg.previous).map(msg => msg.text))}\`\`\``
-        },
+const worker = async ({ command, text, user_id, response_url, channel_name, channel_id }) => {
+  if (command === 'threads') {
+    let finalName = channel_name
+    if (channel_name === 'privategroup') {
+      const { channels } = await web.conversations.list({ types: 'private_channel' })
+      finalName = (channels.find(o => o.id === channel_id) || { name: finalName }).name
+    }
+    // TODO: `![tag]` should be passed in and this used as default!!
+    const result = await web.search.messages({
+      query: `!thread: in:${finalName} after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}`,
+    })
+    // The result contains an identifier for the message, `ts`.
+    // thread messages normally use thread_ts
+    // search.messages does not return this, so make an extra call to check
+    let threads = await Promise.all(result.messages.matches.map(async ({ text, permalink, ts }) => {
+      const thread = await web.conversations.replies({ channel: channel_id, ts})
+      if (thread.messages.length > 1) {
+        return { text, permalink, replies: thread.messages.length - 1 }
+      } else {
+        return false
       }
-    ],
-    user: 'UDKQUMTNV',
-    channel: conversationId,
-  })
-  // The result contains an identifier for the message, `ts`.
-  // thread messages normally use thread_ts
-  // search.messages does not return this
-  // .previous seems to indicate a child
-  console.log(result.messages.matches.filter(msg => !msg.previous).map(msg => msg.text))
-})()
-
-const worker = async ({ response_url, command, value }) => {
-
-  return axios.post(response_url, {
-    response_type: 'ephemeral',
-    blocks: [
-      { type: 'section', text: { type: 'plain_text', emoji: true, text: 'Team Avail' } },
-      ...Object.values({}).map(({ text, peepo }) => ([
-        { type: 'section', text: { type: 'plain_text', emoji: true, text } },
+    }))
+    threads = threads.filter(thread => thread)
+    return axios.post(response_url, {
+      response_type: 'ephemeral',
+      blocks: [
         {
-          type: 'context',
-          elements: peepo.map(({ name, routine }) => ({
-            type: 'plain_text',
-            text: `${name}${routine ? ' (Routine)' : ''}`,
-          })),
-        },
-      ])).flat(),
-      { type: 'divider' },
-      {
-        type: 'context',
-        elements: [
-          { type: 'plain_text', emoji: true, text: `:clock9: ${new Date().toISOString()}` },
-          { type: 'mrkdwn', text: '<|Timeline>' },
-        ],
-      },
-    ],
-  })
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `${threads.length ? `${threads.map(({ text, replies, permalink }) => `\n • ${text.replace('!thread:', '')} - ${replies} msgs - <${permalink}| See Thread>`)}` : 'No Threads Found'}`
+          },
+        }
+      ],
+    })
+  } else {
+    const result = await web.search.messages({
+      query: `${text} after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}`,
+    })
+
+    return axios.post(response_url, {
+      response_type: 'ephemeral',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `${text === user_id ? 'You' : 'They'} were pinged ${result.messages.matches.length} time(s) today!`,
+          },
+        }
+      ],
+    })
+  }
+
 }
 
 const route = (req, res) => {
-  const { text = '', response_url } = req.body
-  // process text from command
-  let command = ''
-  let value
-
-  const payload = { command, value, response_url }
+  const { user_id, text, response_url, channel_name, channel_id } = req.body
+  const { command } = req.query
+  /*
+    {
+      token: 'abc',
+      team_id: 'T1FDR4NG3',
+      team_domain: 'eqworks',
+      channel_id: 'CCCB6QD9S',
+      channel_name: 'bot-cmd',
+      user_id: 'UDKQUMTNV',
+      user_name: 'user_id',
+      command: '/threads',
+      text: '',
+      response_url: 'https://hooks.slack.com/commands/T1FDR4NG3/957681200533/G4WCc5MZfRM6kOFxCtd1lpEG',
+      trigger_id: '957681200677.49467158547.bcd8bacc8087edc008d15d200bfdad49'
+    }
+  */
+  const payload = {
+    command,
+    user_id,
+    text: text === '' ? user_id : text.replace('<','').split('|')[0],
+    channel_id,
+    channel_name,
+    response_url,
+  }
   if (DEPLOYED) {
     lambda.invoke({
       FunctionName: getFuncName('slack'),
@@ -89,11 +100,11 @@ const route = (req, res) => {
         console.error(err)
         return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to check slack' })
       }
-      return res.status(200).json({ response_type: 'ephemeral', text: 'Checking Slack Threads...' })
+      return res.status(200).json({ response_type: 'ephemeral', text: `Checking slack ${command}...` })
     })
   } else {
     worker(payload).catch(console.error)
-    return res.status(200).json({ response_type: 'ephemeral', text: 'Checking Slack Threads...' })
+    return res.status(200).json({ response_type: 'ephemeral', text: `Checking slack ${command}...` })
   }
 }
 
