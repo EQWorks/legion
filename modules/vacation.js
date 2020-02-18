@@ -3,29 +3,42 @@ const { getTasksForProject } = require('@eqworks/avail-bot')
 const { lambda, getFuncName  } = require('./util')
 
 const { DEPLOYED = false } = process.env
-const ASANA_LINK = 'https://app.asana.com/0/1152701043959235/timeline'
-const COMMAND_MAP = {
-  user: 'userName',
-  section: 'sectionName',
-}
-const SECTIONS = ['remote', 'vacation', 'in office']
 
-const worker = async ({ response_url, command, value }) => {
-  // /avail (gets all)
-  // /avail user:[name]
-  // /avail section:[section]
-  // /avail [section | name] checks ENUM first then assumes it's a name and checks
-  // provide feedback in response e.g. "Checking availability for section: In Office"
-  // if (command !== '' && !COMMAND_MAP[command]) {
-  //   return axios.post(response_url, {
-  //     response_type: 'ephemeral',
-  //     text: `Sorry, searching by '${command}' is not supported`,
-  //   })
-  // }
-  // const params = {}
-  // if (COMMAND_MAP[command]){
-  //   params[COMMAND_MAP[command]] = value
-  // }
+const STATUS_BTN_MAP = {
+  'Approved': {
+    text: 'Set Pending',
+    style: 'danger',
+    gid: field => field.enum_options.find(o => o.name === 'Pending').gid
+  },
+  'Confirmed by Employee': {
+    text: 'Approve',
+    style: 'primary',
+    gid: field => field.enum_options.find(o => o.name === 'Approved').gid
+  },
+  'Pending': {
+    text: 'Confirm',
+    style: 'primary',
+    gid: field => field.enum_options.find(o => o.name === 'Confirmed by Employee').gid
+  }
+}
+
+const getStatusButton = (field, status, taskGid) => {
+  const { text, style, gid } = STATUS_BTN_MAP[status]
+  return {
+    accessory: {
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        emoji: true,
+        text: `${text}`,
+      },
+      style: `${style}`,
+      value: `vacay // ${taskGid} // ${field.gid} // ${gid(field)}`
+    }
+  }
+}
+
+const worker = async ({ response_url }) => {
   // const params = {
   //   sectionName: 'vacation',
   //   now: false,
@@ -36,158 +49,122 @@ const worker = async ({ response_url, command, value }) => {
   //   // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
   // }
   // const tasks = await getTasksForProject(params)
+
   const date = new Date()
   date.setYear(date.getFullYear() - 1)
   const params = {
     sectionName: 'vacation',
     now: false,
     rawParams: {
-      opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields',
-      // completed: false,
-      completed: true,
+      opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields,completed',
       'due_on.after': date.getFullYear() + '-12-31'
     },
     // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
   }
-  const tasks = await getTasksForProject(params)
-  const byUser = tasks.reduce((agg, t) => {
+  const vacation = await getTasksForProject(params)
+  const statusField = vacation[0].custom_fields.find(o => o.name === 'Status')
+  const {
+    true: summaryVacay,
+    false: outstandingVacay,
+  } = vacation.reduce((agg, t) => {
     const {
-      assignee: { name },
+      completed,
+      assignee: { gid: userId, name },
+      notes,
+      custom_fields,
       start_on,
       due_on,
+      gid,
     } = t
-    // TODO: handle Status (e.g. what if it was complete, but Pending)
-    // if start_on, then it's a duration, else 1 day
-    console.log('---> ', name, start_on, due_on)
-    agg[name] = (agg[name] || 0) + (start_on ? (
-      (new Date(due_on.replace('-','/')).getTime() - Math.max(new Date(date.getFullYear() + '/12/31').getTime(), new Date(start_on.replace('-','/')).getTime())) / (1000*60*60*24)) : 1)
+    if (completed) {
+      // TODO: handle Status (e.g. what if it was complete, but Pending)
+      // if start_on, then it's a duration, else 1 day
+      agg[completed][name] = (agg[completed][name] || 0) + (start_on ? (
+        (
+          new Date(due_on.replace('-','/')).getTime()
+          -
+          Math.max(
+            new Date(date.getFullYear() + '/12/31').getTime(),
+            new Date(start_on.replace('-','/')).getTime()
+          )
+        ) / (1000*60*60*24)) : 1)
+    } else {
+      const status = custom_fields.find(o => o.name === 'Status')
+      // this filters unset ('-') tasks
+      if (status.enum_value) {
+        if (!agg[completed][status.enum_value.name]) {
+          agg[completed][status.enum_value.name] = []
+        }
+        agg[completed][status.enum_value.name].push({
+          gid,
+          userId,
+          date: start_on ? `${start_on} - ${due_on}` : due_on,
+          name,
+          notes,
+        })
+      }
+    }
     return agg
-  }, {})
-  // console.log(byUser)
-  // const statusTask = tasks[0].custom_fields.find(o => o.name === 'Status')
-  // const byStatus = tasks.reduce((agg, t) => {
-  //   const {
-  //     assignee: { gid: userId, name },
-  //     notes,
-  //     custom_fields,
-  //     start_on,
-  //     due_on,
-  //     gid,
-  //   } = t
-  //   // if start_on, then it's a duration, else 1 day
-  //   const status = custom_fields.find(o => o.name === 'Status')
-  //   // this filters unset ('-') tasks
-  //   if (status.enum_value) {
-  //     if (!agg[status.enum_value.name]) {
-  //       agg[status.enum_value.name] = []
-  //     }
-  //     agg[status.enum_value.name].push({
-  //       gid,
-  //       userId,
-  //       date: start_on ? `${start_on} - ${due_on}` : due_on,
-  //       name,
-  //       notes,
-  //     })
-  //   }
-  //   return agg
-  // }, {})
-  /*
-    'Approved': [...tasks],
-    '': []
-  */
-  // const statusMap = {
-  //   'Approved': {
-  //     text: 'Set Pending',
-  //     gid: statusTask.enum_options.find(o => o.name === 'Pending').gid,
-  //     style: 'danger',
-  //   },
-  //   'Confirmed by Employee': {
-  //     text: 'Approve',
-  //     gid: statusTask.enum_options.find(o => o.name === 'Approved').gid,
-  //     style: 'primary',
-  //   },
-  //   'Pending': {
-  //     text: 'Confirm',
-  //     gid: statusTask.enum_options.find(o => o.name === 'Confirmed by Employee').gid,
-  //     style: 'primary',
-  //   }
-  // }
-  // const getStatusButton = (status, gid) => {
-  //   // if (status === 'Pending') {
-  //   //   return {}
-  //   // }
-  //   // include Approve and Pending for Confirmed By Employee
-  //   return {
-  //     "accessory": {
-  //       "type": "button",
-  //       "text": {
-  //         "type": "plain_text",
-  //         "emoji": true,
-  //         "text": `${statusMap[status].text}`,
-  //       },
-  //       "style": `${statusMap[status].style}`,
-  //       "value": `vacay // ${gid} // ${statusTask.gid} // ${statusMap[status].gid}`
-  //     }
-  //   }
-  // }
+  }, { true: {}, false: {} })
+
   return axios.post(response_url, {
-    response_type: 'in_channel',
+    response_type: 'ephemeral',
     blocks: [
       {
-        "type": "section",
-        "text": {
-          "type": "mrkdwn",
-          "text": "Dev Team ~Slacking~ Vacation"
+        'type': 'section',
+        'text': {
+          'type': 'mrkdwn',
+          'text': 'Dev Team ~Slacking~ Vacation'
         }
       },
-      { "type": "divider" },
-      ...Object.entries(byUser).map(([user, total]) => (
-        {
-          "type": "section",
-          "text": {
-            "type": "mrkdwn",
-            "text": `*${user}*: ${total}`,
-          }
+      { 'type': 'divider' },
+      {
+        'type': 'section',
+        'text': {
+          'type': 'mrkdwn',
+          'text': '*--------- Summary (YTD) ---------*',
         }
-      ))
-      // ...Object.entries(byStatus).map(([status, entries]) => ([
-      //   {
-      //     "type": "section",
-      //     "text": {
-      //       "type": "mrkdwn",
-      //       "text": `_${status}_`
-      //     }
-      //   },
-      //   ...entries.map(({ name, notes, date, gid }) => ({
-      //     "type": "section",
-      //     "text": {
-      //       "type": "mrkdwn",
-      //       "text": `*${name}:* ${date}\n${notes}`
-      //     },
-      //     ...getStatusButton(status, gid)
-      //   })),
-      //   { type: 'divider' },
-      // ])).flat(),
+      },
+      {
+        'type': 'section',
+        'text': {
+          'type': 'mrkdwn',
+          'text': `${Object.entries(summaryVacay).map(([user, total]) => `\n• *${user}:* ${total} day(s)`).join('')}`,
+        }
+      },
+      { 'type': 'divider' },
+      {
+        'type': 'section',
+        'text': {
+          'type': 'mrkdwn',
+          'text': '*--------- Upcoming Vacay ---------*',
+        }
+      },
+      ...Object.entries(outstandingVacay).map(([status, entries]) => ([
+        {
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': `*--- _${status}_ ---*`
+          }
+        },
+        ...entries.map(({ name, notes, date, gid }) => ({
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': `• *${name}:* ${date}\n${notes ? `_${notes}_` : '' }`
+          },
+          ...getStatusButton(statusField, status, gid)
+        })),
+        { type: 'divider' },
+      ])).flat(),
     ],
   })
 }
 
 const route = (req, res) => {
-  const { text = '', response_url } = req.body
-
-  let command = ''
-  let value
-  if (text.indexOf(':') > 0) {
-    ([command, value] = text.split(':').map(v => v.trim()))
-  } else if (text !== '') {
-    if(SECTIONS.includes(text)) {
-      command = 'section'
-    } else {
-      command = 'user'
-    }
-    value = text
-  }
-  const payload = { command, value, response_url }
+  const { response_url } = req.body
+  const payload = { response_url }
   if (DEPLOYED) {
     lambda.invoke({
       FunctionName: getFuncName('slack'),
