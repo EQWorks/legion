@@ -44,19 +44,6 @@ functions:
           path: '{proxy+}'
           method: ANY
           cors: true
-  # specific workers below
-  # TODO: generic worker setup, so [name]: handler: worker[name]
-  # Object.keys(modules).forEach(uri => `${uri}: handler: worker.${uri}`)
-  # slack function with a { type, payload }
+  # generic work
   slack:
     handler: slack-worker
-  food:
-    handler: worker.food
-  diff:
-    handler: worker.diff
-  pipeline:
-    handler: worker.pipeline
-  avail:
-    handler: worker.avail
-  vacay:
-    handler: worker.vacay

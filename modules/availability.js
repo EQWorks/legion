@@ -28,7 +28,6 @@ const worker = async ({ response_url, command, value }) => {
 
   }
   const tasks = await getTasksForProject(params)
-  console.log(params)
   const byAssignee = {}
   tasks.forEach((t) => {
     const {

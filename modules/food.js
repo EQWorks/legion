@@ -105,9 +105,9 @@ const route = (req, res) => {
 
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('food'),
+      FunctionName: getFuncName('slack'),
       InvocationType: 'Event',
-      Payload: JSON.stringify(payload),
+      Payload: JSON.stringify({ type: 'food', payload }),
     }, (err) => {
       if (err) {
         console.error(err)
