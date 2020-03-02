@@ -46,4 +46,4 @@ functions:
           cors: true
   # generic work
   slack:
-    handler: slack-worker
+    handler: slack-worker.handler
