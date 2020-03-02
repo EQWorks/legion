@@ -31,10 +31,11 @@ const worker = async ({ response_url, command, value }) => {
   const byAssignee = {}
   tasks.forEach((t) => {
     const {
-      assignee: { gid, name },
+      assignee,
       name: text,
       memberships: [{ section: { gid: section } }],
     } = t
+    const { gid, name } = assignee || { gid: -1, name: 'Unassigned' }
     const routine = text.toLowerCase().includes('routine')
     if (!byAssignee[gid] || !routine) {
       byAssignee[gid] = { name, text, routine, section }
