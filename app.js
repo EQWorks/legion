@@ -30,7 +30,7 @@ if (process.env.DEPLOYED) {
 
 // secondary prefix for backward compat
 Object.entries(modules).forEach(([uri, { route }]) => {
-  app.use(`/${uri}`, verifySlack, route)
+  app.use(`/${uri}`, route)
 })
 
 // https://o1u4dgxs7a.execute-api.us-east-1.amazonaws.com/dev/interactive
