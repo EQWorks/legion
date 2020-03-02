@@ -32,7 +32,7 @@ jobs:
             ${{ runner.OS }}-build-
             ${{ runner.OS }}-
 
-      - run: npm install -g serverless
+      - run: npm install -g serverless @eqworks/notify
       - run: yarn install
       - run: sls deploy --stage dev
         env:
@@ -46,3 +46,15 @@ jobs:
           NETLIFY_TOKEN: ${{secrets.NETLIFY_TOKEN}}
           YELP_API_KEY: ${{secrets.YELP_API_KEY}}
           ASANA_TOKEN: ${{secrets.ASANA_TOKEN}}
+
+      - name: Notify on deployment success
+        if: success()
+        run: notify deployment $GITHUB_REPOSITORY --commit=$GITHUB_SHA --stage=dev
+        env:
+          SLACK_HOOK: ${{secrets.SLACK_HOOK}}
+
+      - name: Notify on deployment failure
+        if: failure()
+        run: notify deployment $GITHUB_REPOSITORY --commit=$GITHUB_SHA --stage=dev --success=false
+        env:
+          SLACK_HOOK: ${{secrets.SLACK_HOOK}}

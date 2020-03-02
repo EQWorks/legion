@@ -23,6 +23,11 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
+
+if (process.env.DEPLOYED) {
+  app.use(verifySlack)
+}
+
 // secondary prefix for backward compat
 Object.entries(modules).forEach(([uri, { route }]) => {
   app.use(`/${uri}`, verifySlack, route)
