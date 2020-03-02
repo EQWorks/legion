@@ -23,7 +23,6 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
-
 if (process.env.DEPLOYED) {
   app.use(verifySlack)
 }
@@ -39,7 +38,48 @@ Object.entries(modules).forEach(([uri, { route }]) => {
 https://api.slack.com/apps/A6HPM5VC0/interactive-messages
 https://api.slack.com/reference/interaction-payloads/block-actions
 e.g.
-{"type":"block_actions","team":{"id":"T1FDR4NG3","domain":"eqworks"},"user":{"id":"UDKQUMTNV","username":"shane.stratton","name":"shane.stratton","team_id":"T1FDR4NG3"},"api_app_id":"A6HPM5VC0","token":"m4Q8xY7jIYRbwM0W7u7utV30","container":{"type":"message","message_ts":"1581136311.002000","channel_id":"CCCB6QD9S","is_ephemeral":true},"trigger_id":"943038858992.49467158547.dde0a43e507f40a8a487834aa77a6bce","channel":{"id":"CCCB6QD9S","name":"bot-cmd"},"response_url":"https:\/\/hooks.slack.com\/actions\/T1FDR4NG3\/943059145717\/xEl65bpIwt34bx8HkKc5RvNc","actions":[{"action_id":"aZqDQ","block_id":"VlQco","text":{"type":"plain_text","text":"Approve","emoji":true},"value":"1159688855982005 \/\/ 1159688855981996 \/\/ 1159688855981999","style":"primary","type":"button","action_ts":"1581136319.685647"}]}
+{
+  "type": "block_actions",
+  "team": {
+    "id": "T1FDR4NG3",
+    "domain": "eqworks"
+  },
+  "user": {
+    "id": "UDKQUMTNV",
+    "username": "shane.stratton",
+    "name": "shane.stratton",
+    "team_id": "T1FDR4NG3"
+  },
+  "api_app_id": "A6HPM5VC0",
+  "token": "m4Q8xY7jIYRbwM0W7u7utV30",
+  "container": {
+    "type": "message",
+    "message_ts": "1581136311.002000",
+    "channel_id": "CCCB6QD9S",
+    "is_ephemeral": true
+  },
+  "trigger_id": "943038858992.49467158547.dde0a43e507f40a8a487834aa77a6bce",
+  "channel": {
+    "id": "CCCB6QD9S",
+    "name": "bot-cmd"
+  },
+  "response_url": "https://hooks.slack.com/actions/T1FDR4NG3/943059145717/xEl65bpIwt34bx8HkKc5RvNc",
+  "actions": [
+    {
+      "action_id": "aZqDQ",
+      "block_id": "VlQco",
+      "text": {
+        "type": "plain_text",
+        "text": "Approve",
+        "emoji": true
+      },
+      "value": "1159688855982005 // 1159688855981996 // 1159688855981999",
+      "style": "primary",
+      "type": "button",
+      "action_ts": "1581136319.685647"
+    }
+  ]
+}
 */
 app.use('/interactive', (req, res) => {
   const parsed = JSON.parse(req.body.payload)
