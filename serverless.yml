@@ -44,12 +44,6 @@ functions:
           path: '{proxy+}'
           method: ANY
           cors: true
-  # specific workers below
-  food:
-    handler: worker.food
-  diff:
-    handler: worker.diff
-  pipeline:
-    handler: worker.pipeline
-  avail:
-    handler: worker.avail
+  # generic work
+  slack:
+    handler: slack-worker

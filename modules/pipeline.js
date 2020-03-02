@@ -31,9 +31,9 @@ const worker = async ({ response_url }) => {
 const route = ({ body: { response_url } }, res) => {
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('pipeline'),
+      FunctionName: getFuncName('slack'),
       InvocationType: 'Event',
-      Payload: JSON.stringify({ response_url }),
+      Payload: JSON.stringify({ type: 'pipeline', payload: { response_url } }),
     }, (err) => {
       if (err) {
         console.error(err)

@@ -1,5 +1,5 @@
 const axios = require('axios')
-const { queryTasks } = require('@eqworks/avail-bot')
+const { getTasksForProject } = require('@eqworks/avail-bot')
 const { lambda, getFuncName  } = require('./util')
 
 const { DEPLOYED = false } = process.env
@@ -22,11 +22,12 @@ const worker = async ({ response_url, command, value }) => {
       text: `Sorry, searching by '${command}' is not supported`,
     })
   }
-  const params = {}
+  const params = { now: false }
   if (COMMAND_MAP[command]){
     params[COMMAND_MAP[command]] = value
+
   }
-  const tasks = await queryTasks(params)
+  const tasks = await getTasksForProject(params)
   const byAssignee = {}
   tasks.forEach((t) => {
     const {
@@ -93,9 +94,9 @@ const route = (req, res) => {
   const payload = { command, value, response_url }
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('avail'),
+      FunctionName: getFuncName('slack'),
       InvocationType: 'Event',
-      Payload: JSON.stringify(payload),
+      Payload: JSON.stringify({ type: 'avail', payload }),
     }, (err) => {
       if (err) {
         console.error(err)

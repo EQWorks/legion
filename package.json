@@ -11,7 +11,7 @@
     "tunnel": "ngrok http 8000"
   },
   "dependencies": {
-    "@eqworks/avail-bot": "1.0.3",
+    "@eqworks/avail-bot": "^1.0.7",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
