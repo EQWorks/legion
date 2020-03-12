@@ -8,7 +8,7 @@ const COMMAND_MAP = {
   user: 'userName',
   section: 'sectionName',
 }
-const SECTIONS = ['remote', 'vacation', 'in office']
+const SECTIONS = ['Remote', 'Vacation', 'Office', 'Not Avail (not able to work)']
 
 const worker = async ({ response_url, command, value }) => {
   // /avail (gets all)

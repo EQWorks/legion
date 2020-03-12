@@ -53,7 +53,7 @@ const worker = async ({ response_url }) => {
   const date = new Date()
   date.setYear(date.getFullYear() - 1)
   const params = {
-    sectionName: 'vacation',
+    sectionName: 'Vacation',
     now: false,
     rawParams: {
       opt_fields: 'start_on,due_on,due_at,name,notes,assignee.name,custom_fields,completed',
@@ -62,6 +62,21 @@ const worker = async ({ response_url }) => {
     // customFieldSearches: [{ name: 'Status', search: { type: 'value', value: 'Pending' } }]
   }
   const vacation = await getTasksForProject(params)
+
+  if (!vacation) {
+    return axios.post(response_url, {
+      response_type: 'ephemeral',
+      blocks: [
+        {
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': 'No Vacation Found'
+          }
+        },
+      ]
+    })
+  }
   const statusField = vacation[0].custom_fields.find(o => o.name === 'Status')
   const {
     true: summaryVacay,
@@ -91,7 +106,7 @@ const worker = async ({ response_url }) => {
     } else {
       const status = custom_fields.find(o => o.name === 'Status')
       // this filters unset ('-') tasks
-      if (status.enum_value) {
+      if (status && status.enum_value) {
         if (!agg[completed][status.enum_value.name]) {
           agg[completed][status.enum_value.name] = []
         }

@@ -17,7 +17,7 @@ const worker = async ({ command, text, user_id, response_url, channel_name, chan
     }
     // TODO: `![tag]` should be passed in and this used as default!!
     const result = await web.search.messages({
-      query: `!thread: in:${finalName} after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}`,
+      query: `${text} in:${finalName} after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}`,
     })
     // The result contains an identifier for the message, `ts`.
     // thread messages normally use thread_ts
@@ -82,10 +82,14 @@ const route = (req, res) => {
       trigger_id: '957681200677.49467158547.bcd8bacc8087edc008d15d200bfdad49'
     }
   */
+  let finalText = text
+  if (command === 'pings') {
+    finalText = text === '' ? user_id : text.replace('<','').split('|')[0]
+  }
   const payload = {
     command,
     user_id,
-    text: text === '' ? user_id : text.replace('<','').split('|')[0],
+    text: finalText,
     channel_id,
     channel_name,
     response_url,
