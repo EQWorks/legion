@@ -76,7 +76,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
       },
     }
   )
-  const info = commits.map(({
+  const info = commits.filter(({ parents }) => parents.length <= 1).map(({
     sha,
     html_url,
     commit: { message, author, committer },
