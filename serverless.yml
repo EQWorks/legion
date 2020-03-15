@@ -28,6 +28,7 @@ provider:
     NETLIFY_TOKEN: ${env:NETLIFY_TOKEN}
     YELP_API_KEY: ${env:YELP_API_KEY}
     ASANA_TOKEN: ${env:ASANA_TOKEN}
+    SLACK_OAUTH: ${env:SLACK_OAUTH}
 
 functions:
   # Express.js based entry points API server
