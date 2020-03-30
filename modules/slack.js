@@ -37,8 +37,9 @@ const worker = async ({ command, search, user_id, response_url, channel_name, ch
       finalName = (channels.find(o => o.id === channel_id) || { name: finalName }).name
     }
     // TODO: `![tag]` should be passed in and this used as default!!
+    // after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}
     const result = await web.search.messages({
-      query: `${search} in:${finalName} after:${new Date().toISOString().substring(0, 7)}-${new Date().getDate() - 1}`,
+      query: `${search} in:${finalName}`,
     })
     // The result contains an identifier for the message, `ts`.
     // thread messages normally use thread_ts
