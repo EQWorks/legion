@@ -45,7 +45,6 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
           NETLIFY_TOKEN: ${{secrets.NETLIFY_TOKEN}}
           YELP_API_KEY: ${{secrets.YELP_API_KEY}}
-          ASANA_TOKEN: ${{secrets.ASANA_TOKEN}}
           SLACK_OAUTH: ${{secrets.SLACK_OAUTH}}
 
       - name: Notify on deployment success
