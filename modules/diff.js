@@ -26,7 +26,7 @@ const SERVICES = {
 }
 const CLIENTS = {
   overlord: {
-    siteId: 'https://overlord.eqworks.io',
+    siteId: 'overlord.eqworks.io',
     stages: ['master', 'prod'],
     head: 'master',
   },
