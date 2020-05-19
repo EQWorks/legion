@@ -4,6 +4,7 @@ const pipeline = require('./pipeline')
 const avail = require('./availability')
 const vacay = require('./vacation')
 const slack = require('./slack')
+const journal = require('./journal')
 
 
 module.exports = {
@@ -13,4 +14,5 @@ module.exports = {
   avail,
   vacay,
   slack,
+  journal,
 }
