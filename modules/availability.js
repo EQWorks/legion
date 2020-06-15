@@ -25,7 +25,6 @@ const worker = async ({ response_url, command, value }) => {
   const params = { now: false }
   if (COMMAND_MAP[command]){
     params[COMMAND_MAP[command]] = value
-
   }
   const tasks = await getTasksForProject(params)
   const byAssignee = {}
