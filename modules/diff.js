@@ -129,7 +129,10 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
 const getServiceMeta = async (product) => {
   const { baseURL = '', stages = [], key } = SERVICES[product] || {}
   const [dev, prod] = stages
-  const responses = await Promise.all(stages.map((stage) => axios.get(`/${stage}`, { baseURL })))
+  const responses = await Promise.all(stages.map((stage) => axios.get(`/${stage}`, {
+    baseURL,
+    headers: { 'eq-api-jwt': 'public' },
+  })))
   const [head, base] = responses.map(({ data = {} }) => data[key])
 
   return { head, base, dev, prod }
