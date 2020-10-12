@@ -127,7 +127,6 @@ const worker = async ({ command, channel_id, response_url, user_id }) => {
                 }
               ]
             }
-            
           ]
         })
       })
