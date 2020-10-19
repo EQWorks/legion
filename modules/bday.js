@@ -136,7 +136,9 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
   // send card to bday user
   if (command.includes('send') && command.includes('to')) {
     const R = /<(?<MIRO_URL>.*)> to <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)>/
+    const RwithMessage = /<(?<MIRO_URL>.*)> to <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)> (?<CUSTOM_MESSAGE>.*)/
     const matches = command.match(R)
+    const matchesWithOptMessage = command.match(RwithMessage)
 
     // notify user of invalid input
     if (!matches) {
@@ -144,12 +146,14 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
     }
     // send to bday user
     const { groups: { MIRO_URL, BDAY_USER_ID, BDAY_USER_NAME } } = matches
-
+    const renderedText = (!matchesWithOptMessage)
+      ? 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:'
+      : matchesWithOptMessage['groups']['CUSTOM_MESSAGE']
     return web.chat.postMessage({
       channel: BDAY_USER_ID,
       text: [
         `:tada: Happy Birthday @${BDAY_USER_NAME}! :tada:`,
-        'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:',
+        renderedText,
         `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`,
         `- From EQ`
       ].join('\n'),
@@ -166,7 +170,7 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
           'type': 'section',
           'text': {
             'type': 'mrkdwn',
-            'text': 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:'
+            'text': renderedText
           }
         },
         {
@@ -242,19 +246,25 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
       return confirmChannel(response_url, 'celebrate', 'general')
     }
     const R = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)>/
+    const RwithMessage = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)> (?<CUSTOM_MESSAGE>.*)/
     const matches = command.match(R)
+    const matchesWithOptMessage = command.match(RwithMessage)
     // notify user of invalid input
     if (!matches) {
       return invalidInputNotice(response_url, command)
     }
     // send to bday user
     const { groups: { BDAY_USER_NAME } } = matches
+    const renderedText = (!matchesWithOptMessage)
+      ? 'Let\'s warm up their day with some wishes/emojis/gifs! :birthday:'
+      : matchesWithOptMessage['groups']['CUSTOM_MESSAGE']
+
     return axios.post(response_url, {
       response_type: 'in_channel',
       text: [
         ':tada: Birthday Alert :tada:',
-        `@here It's @${BDAY_USER_NAME}'s birthday today! :birthday:`,
-        'Let\'s warm up their day with some wishes/emojis/gifs! :smile:',
+        `@here It's @${BDAY_USER_NAME}'s birthday today!`,
+        renderedText,
       ].join('\n'),
       blocks: [
         {
@@ -269,7 +279,7 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
           'type': 'section',
           'text': {
             'type': 'mrkdwn',
-            'text': `@here It's @${BDAY_USER_NAME}'s birthday today! Let's warm up their day with some wishes/emojis/gifs! :birthday:`
+            'text': `@here It's @${BDAY_USER_NAME}'s birthday today! ${renderedText}`
           }
         },
         {
