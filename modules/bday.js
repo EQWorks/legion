@@ -1,8 +1,8 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
+const { lambda, getFuncName  } = require('./util')
 
-
-const { SLACK_OAUTH } = process.env
+const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
 
 const invalidInputNotice = (response_url, command) => (
@@ -57,19 +57,35 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
     return Promise.all(
       members.map(async (channel) => await web.chat.postMessage({
         channel,
+        text: [
+          `:tada: Birthday Alert for ${BDAY_USER_NAME} :tada:`,
+          `*${BDAY_USER_NAME}'s* birthday is coming up soon! Take some time and leave a nice message for ${BDAY_USER_NAME} to read. Thanks! :smile:`,
+          `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
+        ].join('\n'),
         blocks: [
-          { type: 'divider' },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: [
-                `:tada: *${BDAY_USER_NAME}'s* birthday is coming up soon! :birthday:`,
-                `:tada: When you get a chance, visit ${MIRO_URL} to sign their birthday card!`,
-              ].join('\n'),
+            {
+              'type': 'header',
+              'text': {
+                'type': 'plain_text',
+                'text': `:tada: Birthday Alert for ${BDAY_USER_NAME} :tada:`,
+                'emoji': true
+              }
             },
-          },
-        ],
+            {
+              'type': 'section',
+              'text': {
+                'type': 'mrkdwn',
+                'text':  `*${BDAY_USER_NAME}*'s birthday is coming up soon! Take some time and leave a nice message for ${BDAY_USER_NAME} to read. Thanks! :smile:`
+              }
+            },
+            {
+              'type': 'section',
+              'text': {
+                'type': 'mrkdwn',
+                'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
+              }
+            }
+          ]
       }))
     )
       .then(() => {
@@ -77,15 +93,36 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
         return axios.post(response_url, {
           response_type: 'ephemeral',
           blocks: [
-            { type: 'divider' },
             {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `Invitation to sign on ${MIRO_URL} has been sent to members in #${channel_name}!`,
-              },
+              'type': 'header',
+              'text': {
+                'type': 'plain_text',
+                'text': `Card has been sent for signing to everyone except @${BDAY_USER_NAME}! :tada:`,
+                'emoji': true
+              }
             },
-          ],
+            {
+              'type': 'section',
+              'text': {
+                'type': 'mrkdwn',
+                'text': 'Thanks for spreading some love! :smile:'
+              }
+            },
+            {
+              'type': 'divider'
+            },
+            {
+              'type': 'context',
+              'elements': [
+                {
+                  'type': 'plain_text',
+                  'text': `Card link: ${MIRO_URL}`,
+                  'emoji': true
+                }
+              ]
+            }
+            
+          ]
         })
       })
       .catch((e) => {
@@ -100,41 +137,93 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
   if (command.includes('send') && command.includes('to')) {
     const R = /<(?<MIRO_URL>.*)> to <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)>/
     const matches = command.match(R)
+
     // notify user of invalid input
     if (!matches) {
       return invalidInputNotice(response_url, command)
     }
     // send to bday user
     const { groups: { MIRO_URL, BDAY_USER_ID, BDAY_USER_NAME } } = matches
+
     return web.chat.postMessage({
       channel: BDAY_USER_ID,
+      text: [
+        `:tada: Happy Birthday @${BDAY_USER_NAME}! :tada:`,
+        'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:',
+        `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`,
+        `- From EQ`
+      ].join('\n'),
       blocks: [
-        { type: 'divider' },
         {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: [
-              `:birthday: HAPPY BIRTHDAY @${BDAY_USER_NAME}!!! :tada: :tada: :tada:`,
-              `:birthday: Visit ${MIRO_URL} to see your birthday card!`,
-            ].join('\n'),
-          },
+          'type': 'header',
+          'text': {
+            'type': 'plain_text',
+            'text': `:tada: Happy Birthday @${BDAY_USER_NAME}! :tada:`,
+            'emoji': true
+          }
         },
-      ],
+        {
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:'
+          }
+        },
+        {
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`
+          }
+        },
+        {
+          'type': 'divider'
+        },
+        {
+          'type': 'context',
+          'elements': [
+            {
+              'type': 'plain_text',
+              'text': `From EQ`,
+              'emoji': true
+            }
+          ]
+        }
+      ]
     })
       .then(() => {
         // notify user bday card has been sent
         return axios.post(response_url, {
           response_type: 'ephemeral',
           blocks: [
-            { type: 'divider' },
             {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `Brithday link ${MIRO_URL} has been sent to *${BDAY_USER_NAME}*!`,
-              },
+              'type': 'header',
+              'text': {
+                'type': 'plain_text',
+                'text': `Card has been sent to @${BDAY_USER_NAME}! :tada:`,
+                'emoji': true
+              }
             },
+            {
+              'type': 'section',
+              'text': {
+                'type': 'mrkdwn',
+                'text': 'Thanks for spreading some love! :smile:'
+              }
+            },
+            {
+              'type': 'divider'
+            },
+            {
+              'type': 'context',
+              'elements': [
+                {
+                  'type': 'plain_text',
+                  'text': `Card link: ${MIRO_URL}`,
+                  'emoji': true
+                }
+              ]
+            }
           ],
         })
       })
@@ -162,20 +251,33 @@ const worker = async ({ command, channel_id, channel_name, response_url }) => {
     const { groups: { BDAY_USER_NAME } } = matches
     return axios.post(response_url, {
       response_type: 'in_channel',
+      text: [
+        ':tada: Birthday Alert :tada:',
+        `@here It's @${BDAY_USER_NAME}'s birthday today! :birthday:`,
+        'Let\'s warm up their day with some wishes/emojis/gifs! :smile:',
+      ].join('\n'),
       blocks: [
-        { type: 'divider' },
         {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: [
-              ':tada: Birthday Aler :tada:',
-              `@here It's @${BDAY_USER_NAME}'s birthday today!!! :birthday:`,
-              'Lets warm up their day with some wishes/emojis/gifs! :smile:',
-            ].join('\n'),
-          },
+          'type': 'header',
+          'text': {
+            'type': 'plain_text',
+            'text': ':tada: Birthday Alert :tada:',
+            'emoji': true
+          }
         },
-      ],
+        {
+          'type': 'section',
+          'text': {
+            'type': 'mrkdwn',
+            'text': `@here It's @${BDAY_USER_NAME}'s birthday today! Let's warm up their day with some wishes/emojis/gifs! :birthday:`
+          }
+        },
+        {
+          "type": "image",
+          "image_url": "https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif",
+          "alt_text": "minion birthday"
+        }
+      ]
     })
   }
 
@@ -217,11 +319,26 @@ const route = (req, res) => {
   }
 
   const payload = { command: text, response_url, channel_id, channel_name }
-  worker(payload).catch(console.error)
-  return res.status(200).json({
-    response_type: 'ephemeral',
-    text: 'Got it! Processing your bday commands now...'
-  })
+
+  if (DEPLOYED) {
+    lambda.invoke({
+      FunctionName: getFuncName('slack'),
+      InvocationType: 'Event',
+      Payload: JSON.stringify({ type: 'bday', payload }),
+    }, (err) => {
+      if (err) {
+        console.error(err)
+        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to process bday command' })
+      }
+      return res.status(200).json({ response_type: 'ephemeral', text: 'Got it! Processing your bday commands now...' })
+    })
+  } else {
+    worker(payload).catch(console.error)
+    return res.status(200).json({
+      response_type: 'ephemeral',
+      text: 'Got it! Processing your bday commands now...'
+    })
+  }
 }
 
 module.exports = { worker, route }
