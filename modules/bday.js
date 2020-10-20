@@ -51,9 +51,9 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
       return invalidInputNotice(response_url, command)
     }
     // send to every member in #general excluding bday person
-    const { groups: { MIRO_URL, BDAY_USER_ID, BDAY_USER_NAME } } = matches
+    const { groups: { MIRO_URL, BDAY_USER_ID } } = matches
     const bdayPerson = await web.users.info({ user: BDAY_USER_ID })
-    const bdayPersonFullName = bdayPerson.user.real_name
+    const { user: { real_name: bdayPersonFullName } } = bdayPerson
     const { members } = await web.conversations.members({ channel: channel_id })
     members.splice(members.findIndex((m) => m === BDAY_USER_ID), 1)
     return Promise.all(
@@ -147,10 +147,11 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
       return invalidInputNotice(response_url, command)
     }
     // send to bday user
-    const { groups: { MIRO_URL, BDAY_USER_ID, BDAY_USER_NAME } } = matches
+    const { groups: { MIRO_URL, BDAY_USER_ID } } = matches
     const sender = await web.users.info({ user: user_id })
     const bdayPerson = await web.users.info({ user: BDAY_USER_ID })
-    const bdayPersonFullName = bdayPerson.user.real_name
+    const { user: { real_name: bdayPersonFullName } } = bdayPerson
+    const { user: { real_name: senderFullName } } = sender
 
     const renderedText = (!matchesWithOptMessage)
       ? 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:'
@@ -161,7 +162,7 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
         `:tada: Happy Birthday ${bdayPersonFullName}! :tada:`,
         renderedText,
         `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`,
-        `- From ${sender.user.real_name} on behalf of EQ`
+        `- From ${senderFullName} on behalf of EQ`
       ].join('\n'),
       blocks: [
         {
@@ -194,7 +195,7 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
           'elements': [
             {
               'type': 'plain_text',
-              'text': `From ${sender.user.real_name} on behalf of EQ`,
+              'text': `From ${senderFullName} on behalf of EQ`,
               'emoji': true
             }
           ]
