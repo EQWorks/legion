@@ -2,6 +2,8 @@ const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
 const { lambda, getFuncName  } = require('./util')
 
+
+const GENERAL_CHANNEL_ID = 'C1FDR4QJF'
 const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
 
@@ -36,12 +38,13 @@ const confirmChannel = (response_url, cmd, channel) => (
   })
 )
 
-const worker = async ({ command, channel_id, channel_name, response_url, user_id }) => {
+const worker = async ({ command, channel_id, response_url, user_id }) => {
   // send card for members to sign
   if (command.includes('sign') && command.includes('for')) {
     // make sure to execute command from #general
-    if (channel_name !== 'general') {
-      return confirmChannel(response_url, 'sign', 'general')
+    if (channel_id !== GENERAL_CHANNEL_ID) {
+      const { channel: { name } } = await web.conversations.info({ channel: GENERAL_CHANNEL_ID })
+      return confirmChannel(response_url, 'sign', name)
     }
     // sign URL for @user_id|user_name
     const R = /<(?<MIRO_URL>.*)> for <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)>/
@@ -56,8 +59,9 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
     const { user: { real_name: bdayPersonFullName } } = bdayPerson
     const { members } = await web.conversations.members({ channel: channel_id })
     members.splice(members.findIndex((m) => m === BDAY_USER_ID), 1)
+    // return web.conversations.open({ users: members.toString() })
     return Promise.all(
-      members.map(async (channel) => await web.chat.postMessage({
+      members.map((channel) => web.chat.postMessage({
         channel,
         text: [
           `:tada: Birthday Alert for ${bdayPersonFullName} :tada:`,
@@ -249,8 +253,9 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
   // announce in channel
   if (command.includes('celebrate') && command.includes('for')) {
     // make sure to execute command from #general
-    if (channel_name !== 'general') {
-      return confirmChannel(response_url, 'celebrate', 'general')
+    if (channel_id !== GENERAL_CHANNEL_ID) {
+      const { channel: { name } } = await web.conversations.info({ channel: GENERAL_CHANNEL_ID })
+      return confirmChannel(response_url, 'celebrate', name)
     }
     const R = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)>/
     const RwithMessage = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)> (?<CUSTOM_MESSAGE>.*)/
@@ -326,7 +331,7 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
 }
 
 const route = (req, res) => {
-  const { text = '', response_url, channel_id, channel_name, user_id } = req.body
+  const { text = '', response_url, channel_id, user_id } = req.body
   const validCmd = text.match(/sign|send|celebrate/)
   if (text !== '' && !validCmd) {
     return res.status(200).json({
@@ -335,7 +340,7 @@ const route = (req, res) => {
     })
   }
 
-  const payload = { command: text, response_url, channel_id, channel_name, user_id }
+  const payload = { command: text, response_url, channel_id, user_id }
 
   if (DEPLOYED) {
     lambda.invoke({
