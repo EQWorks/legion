@@ -65,29 +65,29 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
           `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
         ].join('\n'),
         blocks: [
-            {
-              'type': 'header',
-              'text': {
-                'type': 'plain_text',
-                'text': `:tada: Birthday Alert for ${bdayPersonFullName} :tada:`,
-                'emoji': true
-              }
-            },
-            {
-              'type': 'section',
-              'text': {
-                'type': 'mrkdwn',
-                'text':  `*${bdayPersonFullName}*'s birthday is coming up soon! Take some time and leave a nice message for ${bdayPersonFullName} to read. Thanks! :smile:`
-              }
-            },
-            {
-              'type': 'section',
-              'text': {
-                'type': 'mrkdwn',
-                'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
-              }
+          {
+            'type': 'header',
+            'text': {
+              'type': 'plain_text',
+              'text': `:tada: Birthday Alert for ${bdayPersonFullName} :tada:`,
+              'emoji': true
             }
-          ]
+          },
+          {
+            'type': 'section',
+            'text': {
+              'type': 'mrkdwn',
+              'text':  `*${bdayPersonFullName}*'s birthday is coming up soon! Take some time and leave a nice message for ${bdayPersonFullName} to read. Thanks! :smile:`
+            }
+          },
+          {
+            'type': 'section',
+            'text': {
+              'type': 'mrkdwn',
+              'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
+            }
+          }
+        ]
       }))
     )
       .then(() => {
@@ -290,9 +290,9 @@ const worker = async ({ command, channel_id, channel_name, response_url, user_id
           }
         },
         {
-          "type": "image",
-          "image_url": "https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif",
-          "alt_text": "minion birthday"
+          'type': 'image',
+          'image_url': 'https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif',
+          'alt_text': 'minion birthday'
         }
       ]
     })
