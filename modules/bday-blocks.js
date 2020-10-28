@@ -233,7 +233,7 @@ module.exports.sendConfirmation = ([{ fullName, url }, ...rest]) => {
   let name = fullName
   let allCards = `${url}`
   if (rest.length) {
-    for (let { fullName, url } of rest){
+    for (let { fullName, url } of rest) {
       name += ` & ${fullName}`
       allCards += `, ${url}`
     }
@@ -268,3 +268,47 @@ module.exports.sendConfirmation = ([{ fullName, url }, ...rest]) => {
     },
   ]
 }
+module.exports.celebrateBlocks = (BDAY_USER_NAME, renderedText) => ([
+  {
+    'type': 'header',
+    'text': {
+      'type': 'plain_text',
+      'text': ':tada: Birthday Alert :tada:',
+      'emoji': true
+    }
+  },
+  {
+    'type': 'section',
+    'text': {
+      'type': 'mrkdwn',
+      'text': `@here It's @${BDAY_USER_NAME}'s birthday today! ${renderedText}`
+    }
+  },
+  {
+    'type': 'image',
+    'image_url': 'https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif',
+    'alt_text': 'minion birthday'
+  }
+])
+
+module.exports.defaultBlock = [
+  { type: 'divider' },
+  {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: 'Oops! Missing some required keywords! Please see the following guide on how to use the */bday* command:'
+    },
+  },
+  {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: [
+        '(1) */bday* sign',
+        '(2) */bday* send',
+        '(3) */bday* celebrate for @bday-user optional custom message',
+      ].join('\n'),
+    },
+  },
+]

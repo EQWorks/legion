@@ -10,6 +10,8 @@ const {
   sendText,
   sendBlocks,
   sendConfirmation,
+  defaultBlock,
+  celebrateBlocks,
 } = require('./bday-blocks')
 
 
@@ -63,7 +65,7 @@ const worker = async ({
   sender,
 }) => {
   // send card for members to sign
-  if (command.includes('sign')) {
+  if (command === 'sign') {
     // first iteration returns modal
     if (!type) {
       // make sure to execute command from #general
@@ -180,7 +182,7 @@ const worker = async ({
   }
 
   // send card to bday user
-  if (command.includes('send')) {
+  if (command === 'send') {
     // first iteration returns modal
     if (!type) {
       const state = {
@@ -313,55 +315,14 @@ const worker = async ({
         `@here It's @${BDAY_USER_NAME}'s birthday today!`,
         renderedText,
       ].join('\n'),
-      blocks: [
-        {
-          'type': 'header',
-          'text': {
-            'type': 'plain_text',
-            'text': ':tada: Birthday Alert :tada:',
-            'emoji': true
-          }
-        },
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': `@here It's @${BDAY_USER_NAME}'s birthday today! ${renderedText}`
-          }
-        },
-        {
-          'type': 'image',
-          'image_url': 'https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif',
-          'alt_text': 'minion birthday'
-        }
-      ]
+      blocks: celebrateBlocks(BDAY_USER_NAME, renderedText),
     })
   }
 
   // default return for missing params
   return axios.post(response_url, {
     response_type: 'ephemeral',
-    blocks: [
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'Oops! Missing some required keywords! Please see the following guide on how to use the */bday* command:'
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: [
-            '(1) */bday* sign <URL> for @bday-user',
-            '(2) */bday* send <URL> to @bday-user',
-            '(3) */bday* celebrate for @bday-user',
-          ].join('\n'),
-        },
-      },
-    ],
+    blocks: defaultBlock,
   })
 }
 
