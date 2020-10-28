@@ -9,15 +9,15 @@ module.exports._blocks = (ref) => ([
     block_id: `bday_person_${ref}`,
     type: 'input',
     element:
-      {
-        'action_id': 'input',
-        'type': 'users_select',
-        'placeholder': {
-          'type': 'plain_text',
-          'text': 'Bday Person',
-          emoji: true,
-        },
+    {
+      'action_id': 'input',
+      'type': 'users_select',
+      'placeholder': {
+        'type': 'plain_text',
+        'text': 'Bday Person',
+        emoji: true,
       },
+    },
   },
   {
     'type': 'input',
@@ -36,6 +36,25 @@ module.exports._blocks = (ref) => ([
     }
   },
 ])
+
+module.exports.customMessage = (ref) => ({
+  'type': 'input',
+  'block_id': `message_${ref}`,
+  'label': {
+    'type': 'plain_text',
+    'text': 'Bday Message'
+  },
+  'element': {
+    'type': 'plain_text_input',
+    'action_id': 'input',
+    initial_value: 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:',
+    'multiline': true
+  },
+  'hint': {
+    'type': 'plain_text',
+    'text': 'This is the default message',
+  }
+})
 
 module.exports.button = {
   'type': 'actions',
@@ -88,14 +107,14 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
 
   let clickSectionText = [getClick(fullName, url)]
   let clickSectionBlock = [getClick(fullName, url, 'block')]
-  let allCards = `<${url}>`
+  let allCards = `${url}`
 
   if (rest.length) {
     for (let { fullName, url } of rest) {
       name += ` & ${fullName}`
       clickSectionText.push(getClick(fullName, url))
       clickSectionBlock.push(getClick(fullName, url, 'block'))
-      allCards += `, <${url}>`
+      allCards += `, ${url}`
     }
   }
 
@@ -164,4 +183,88 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
     }
   ]
   return { text, blocks, confirmation }
+}
+
+module.exports.sendText = ({ fullName, url, message, sender }) => ([
+  `:tada: Happy Birthday ${fullName}! :tada:`,
+  message,
+  `Click :point_right: <${url}|here> :point_left: to see the birthday card!`,
+  `- From <@${sender}> on behalf of EQ`
+].join('\n'))
+
+module.exports.sendBlocks = ({ fullName, url, message, sender }) => ([
+  {
+    'type': 'header',
+    'text': {
+      'type': 'plain_text',
+      'text': `:tada: Happy Birthday ${fullName}! :tada:`,
+      'emoji': true
+    }
+  },
+  {
+    'type': 'section',
+    'text': {
+      'type': 'mrkdwn',
+      'text': message
+    }
+  },
+  {
+    'type': 'section',
+    'text': {
+      'type': 'mrkdwn',
+      'text': `Click :point_right: <${url}|here> :point_left: to see the birthday card!`
+    }
+  },
+  {
+    'type': 'divider'
+  },
+  {
+    'type': 'context',
+    'elements': [
+      {
+        'type': 'mrkdwn',
+        'text': `From <@${sender}> on behalf of EQ`,
+      }
+    ]
+  }
+])
+
+module.exports.sendConfirmation = ([{ fullName, url }, ...rest]) => {
+  let name = fullName
+  let allCards = `${url}`
+  if (rest.length) {
+    for (let { fullName, url } of rest){
+      name += ` & ${fullName}`
+      allCards += `, ${url}`
+    }
+  }
+  return [
+    {
+      'type': 'header',
+      'text': {
+        'type': 'plain_text',
+        'text': `Card has been sent to ${name}! :tada:`,
+        'emoji': true
+      }
+    },
+    {
+      'type': 'section',
+      'text': {
+        'type': 'mrkdwn',
+        'text': 'Thanks for spreading some love! :smile:'
+      }
+    },
+    {
+      'type': 'divider'
+    },
+    {
+      'type': 'context',
+      'elements': [
+        {
+          'type': 'mrkdwn',
+          'text': `Card link(s): ${allCards}`,
+        }
+      ]
+    },
+  ]
 }
