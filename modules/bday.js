@@ -82,6 +82,7 @@ const worker = async ({
       return web.views.open({
         trigger_id,
         view: {
+          'callback_id': 'bday',
           'private_metadata': JSON.stringify(state),
           'type': 'modal',
           'title': {
@@ -127,6 +128,7 @@ const worker = async ({
         hash,
         view: {
           private_metadata,
+          'callback_id': 'bday',
           'type': 'modal',
           'title': {
             'type': 'plain_text',
@@ -193,6 +195,7 @@ const worker = async ({
       return web.views.open({
         trigger_id,
         view: {
+          'callback_id': 'bday',
           'private_metadata': JSON.stringify(state),
           'type': 'modal',
           'title': {
@@ -238,6 +241,7 @@ const worker = async ({
         hash,
         view: {
           private_metadata,
+          'callback_id': 'bday',
           'type': 'modal',
           'title': {
             'type': 'plain_text',
@@ -290,17 +294,24 @@ const worker = async ({
   // announce in channel
   if (command.includes('celebrate') && command.includes('for')) {
     // make sure to execute command from #general
-    if (channel_name !== 'general') {
-      return confirmChannel(response_url, 'celebrate', 'general')
+    if (channel_id !== GENERAL_CHANNEL_ID) {
+      const { channel: { name } } = await web.conversations.info({ channel: GENERAL_CHANNEL_ID })
+      return confirmChannel(response_url, 'celebrate', name)
     }
     const R = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)>/
+    const RwithMessage = /celebrate for <@.*\|(?<BDAY_USER_NAME>.*)> (?<CUSTOM_MESSAGE>.*)/
     const matches = command.match(R)
+    const matchesWithOptMessage = command.match(RwithMessage)
     // notify user of invalid input
     if (!matches) {
       return invalidInputNotice(response_url, command)
     }
     // send to bday user
     const { groups: { BDAY_USER_NAME } } = matches
+    const renderedText = (!matchesWithOptMessage)
+      ? 'Let\'s warm up their day with some wishes/emojis/gifs! :birthday:'
+      : matchesWithOptMessage['groups']['CUSTOM_MESSAGE']
+
     return axios.post(response_url, {
       response_type: 'in_channel',
       text: [
@@ -326,7 +337,6 @@ const route = (req, res) => {
     channel_id,
     user_id,
     trigger_id,
-    payload,
   } = req.body
 
   const validCmd = text.match(/sign|send|celebrate/)
@@ -337,125 +347,39 @@ const route = (req, res) => {
     })
   }
 
-  // from initial slash command trigger
-  const payloadSlash = { 'command': text, response_url, channel_id, sender: user_id, trigger_id }
-
-  // from modal interactions only
-  let payloadSign
-  if (payload) {
-    const {
-      type,
-      view: { id, hash, private_metadata, state: { values }, blocks },
-      actions,
-      user: { id: sender }
-    } = JSON.parse(payload)
-
-    let data
-    // validate input from modal
-    if (type === 'view_submission') {
-      /**
-          values = {
-            bday_person_1: { input: { type: 'users_select', selected_user: 'U01B87YFQ78' } },
-            url_1: { input: { type: 'plain_text_input', value: 'test' } },
-            bday_person_2: { input: { type: 'users_select', selected_user: 'U01B87YFQ78' } },
-            url_2: { input: { type: 'plain_text_input', value: 'test' } }
-            ...
-          }
-        */
-      const errors = {}
-      const validData = (key, input) => {
-        if (!input.startsWith('http')) {
-          errors[key] = 'Invalid url. Hint: make sure it includes `http`'
-        }
-      }
-
-      data = Object.entries(values).reduce((acc, [key, { input }]) => {
-        // key = bday_person_1 || url_1 || message_1
-        const user_index = key.slice(-1)
-        if (acc[user_index]) {
-          if (key.includes('url')) {
-            validData(key, input.value)
-            acc[user_index] = { ...acc[user_index], url: input.value }
-          }
-          if (key.includes('message')) {
-            acc[user_index] = { ...acc[user_index], message: input.value }
-          }
-        } else {
-          acc[user_index] = { id: input.selected_user }
-        }
-        return acc
-      }, {})
-      /**
-       * data {
-          '1': { id: 'U01B87YFQ78', url: 'test' },
-          '2': { id: 'U01B87ZH3GW', url: 'test' }
-        }
-       */
-      if (Object.values(errors).length) {
-        return res.status(200).json({ response_action: 'errors', errors })
-      }
-    }
-
-    const {
-      ref,
-      response_url,
-      command,
-      channel_id
-    } = JSON.parse(private_metadata)
-
-    payloadSign = {
-      ref,
-      command,
-      type,
-      view_id: id,
-      hash,
-      response_url,
-      data,
-      blocks,
-      action: actions ? actions[0] : [], // how to check for existence & destructure & set default value?
-      channel_id,
-      sender
-    }
-  }
-
-  const _payload = payload ? payloadSign : payloadSlash
+  const payload = { 'command': text, response_url, channel_id, sender: user_id, trigger_id }
 
   if (DEPLOYED) {
     lambda.invoke({
       FunctionName: getFuncName('slack'),
       InvocationType: 'Event',
-      Payload: JSON.stringify({ type: 'bday', _payload }),
+      Payload: JSON.stringify({ type: 'bday', payload }),
     }, (err) => {
       if (err) {
         console.error(err)
         return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to process bday command' })
       }
-      if (text.match(/sign|send/) && !payload) {
+      if (text.match(/sign|send/)) {
         return res.status(200).json({
           response_type: 'ephemeral',
           text: 'Got it! But I will need more details...'
         })
-      } else if (payload && _payload.type === 'view_submission') {
-        return res.status(200).json({ 'response_action': 'clear' })
       } else {
+        // celebrate doens't need more details yet
         return res.sendStatus(200)
       }
     })
   } else {
-    worker(_payload).catch(console.error)
-    if (text.match(/sign|send/) && !payload) {
+    worker(payload).catch(console.error)
+    if (text.match(/sign|send/)) {
       return res.status(200).json({
         response_type: 'ephemeral',
         text: 'Got it! But I will need more details...'
       })
-    } else if (payload && _payload.type === 'view_submission') {
-      // needs to have only <response_action> for modals submission
-      return res.status(200).json({ 'response_action': 'clear' })
     } else {
-      // modal interactions need to have acknowledgement
+      // celebrate doens't need more details yet
       return res.sendStatus(200)
     }
   }
 }
-
 module.exports = { worker, route }
