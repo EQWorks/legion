@@ -114,17 +114,9 @@ const worker = async ({ channel, response_url, ts, text }) => {
     })
     const did = isActionDid.length ? _input.slice(isActionDid[0], isActionDoing[0]) : []
     // const doing = isActionDoing.length && _input.slice(isActionDoing[0], isActionQuestions[0])
-    // const question = isActionQuestions.length && _input.slice(isActionQuestions[0])
+    const questions = isActionQuestions.length ? _input.slice(isActionQuestions[0]) : []
 
-    did.forEach((input) => {
-      // 'Did - Locus:'
-      if (input.toLowerCase().match(/^did/)) {
-        const { groups: { main_project } } = input.match(/(?<action>\w+)(\W*)(?<main_project>[A-Za-z]*)?/) || {}
-        project = main_project ? main_project.toLowerCase() : 'others'
-        categorizedData[project] = { ...categorizedData[project] }
-        // categorizedData: { locus: {}}
-        return
-      }
+    const categorize = (input) => {
       const [repo, subCat, _update] = parseSubject(input.replace(/^\W*\s*/, ''))
       const update = `${_update} (<@${user}>)`
 
@@ -137,6 +129,27 @@ const worker = async ({ channel, response_url, ts, text }) => {
       } else {
         categorizedData[project][repo] = { [subCat]: [update] }
       }
+    }
+
+    did.forEach((input) => {
+      // 'Did - Locus:'
+      if (input.toLowerCase().match(/^did/)) {
+        const { groups: { main_project } } = input.match(/(?<action>\w+)(\W*)(?<main_project>[A-Za-z]*)?/) || {}
+        project = main_project ? main_project.toLowerCase() : 'others'
+        categorizedData[project] = { ...categorizedData[project] }
+        // categorizedData: { locus: {}}
+        return
+      }
+      categorize(input)
+    })
+
+    questions.forEach((input) => {
+      if (input.toLowerCase().match(/^question/)) {
+        project = 'questions'
+        categorizedData[project] = { ...categorizedData[project] }
+        return
+      }
+      categorize(input)
     })
     /**
      categorizedData = {
@@ -153,7 +166,8 @@ const worker = async ({ channel, response_url, ts, text }) => {
     }
      */
   })
-
+  const _questions = categorizedData.questions
+  delete categorizedData.questions
   let response = ''
   Object.entries(categorizedData).forEach(([project, details]) => {
     if (project !== 'others') response += `\n\n\n ${project.toUpperCase()} \n`
@@ -164,11 +178,28 @@ const worker = async ({ channel, response_url, ts, text }) => {
           content.forEach((input) => (response += `    • ${input} \n`))
         } else {
           response += `    *_${subCat}_* \n`
-          content.forEach((input) => (response += `          • ${input} \n`))
+          content.forEach((input) => (response += `        • ${input} \n`))
         }
       })
     })
   })
+
+  if (_questions){
+    response += '\n\n\n QUESTIONS \n'
+    Object.entries(_questions).forEach(([repo, updates]) => {
+      response += repo === 'others' ? '' : `\n*_${repo}_* \n`
+      Object.entries(updates).forEach(([subCat, content]) => {
+        if (subCat === 'others') {
+          content.forEach((input) => (response += `    • ${input} \n`))
+        } else {
+          response += `    *_${subCat}_* \n`
+          content.forEach((input) => (response += `        • ${input} \n`))
+        }
+      })
+    })
+
+  }
+
   //---------------------
   // to use blocks instead of text
   // const o = {}
