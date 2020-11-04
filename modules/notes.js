@@ -29,7 +29,7 @@ const worker = async ({ channel, response_url, ts, text }) => {
           {
             type: 'rich_text_section',
             elements: [
-              { type: 'text', text}]
+              { type: 'text', text }]
           },
           {
             type: 'rich_text_list',
@@ -170,175 +170,40 @@ const worker = async ({ channel, response_url, ts, text }) => {
   delete categorizedData.questions
   let response = ''
   Object.entries(categorizedData).forEach(([project, details]) => {
-    if (project !== 'others') response += `\n\n\n ${project.toUpperCase()} \n`
+    // to account for updates with no project name like 'Did' instead of 'Did - locus'
+    if (project !== 'others') response += `\n\n\n${project.toUpperCase()}\n`
     Object.entries(details).forEach(([repo, updates]) => {
-      response += `\n\n*_${repo}_* \n`
+      response += `\n\n*_${repo}_*\n`
       Object.entries(updates).forEach(([subCat, content]) => {
         if (subCat === 'others') {
-          content.forEach((input) => (response += `    • ${input} \n`))
+          content.forEach((input) => (response += `\t• ${input}\n`))
         } else {
-          response += `    *_${subCat}_* \n`
-          content.forEach((input) => (response += `        • ${input} \n`))
+          response += `\t*_${subCat}_* \n`
+          content.forEach((input) => (response += `\t\t• ${input}\n`))
         }
       })
     })
   })
 
-  if (_questions){
-    response += '\n\n\n QUESTIONS \n'
+  if (_questions) {
+    response += '\n\n\nQUESTIONS\n'
     Object.entries(_questions).forEach(([repo, updates]) => {
-      response += repo === 'others' ? '' : `\n*_${repo}_* \n`
+      response += repo === 'others' ? '' : `\n*_${repo}_*\n`
       Object.entries(updates).forEach(([subCat, content]) => {
         if (subCat === 'others') {
-          content.forEach((input) => (response += `    • ${input} \n`))
+          content.forEach((input) => (response += `\t• ${input}\n`))
         } else {
-          response += `    *_${subCat}_* \n`
-          content.forEach((input) => (response += `        • ${input} \n`))
+          response += `\t*_${subCat}_*\n`
+          content.forEach((input) => (response += `\t\t• ${input}\n`))
         }
       })
     })
 
   }
 
-  //---------------------
-  // to use blocks instead of text
-  // const o = {}
-  // updates.forEach(({
-  //   text,
-  //   blocks: [{ elements: [did, did_input, ...rest] }],
-  //   user
-  // }) => {
-  //   did_input.elements.forEach(({ elements: [{ text: input }] }) => {
-  //     //[{
-  //     //     type: 'text',
-  //     //     text: 'snoke/marketplace:  url blocks for marketplace - only dev has access'
-  //     // }]
-  //     const [t1, t2, message] = parseSubject(input) // what about when no t2?
-  //     console.log(t1, t2, message)
-  //     // if (o[t1]) {
-  //     //   o[t1] = {...o[t1], [t2]: `${message} by (<@${user}>)` }
-  //     // } else {
-  //     //   o[t1] = {}
-  //     // }
-  //   })
-  // })
-  //---------------------
   return axios.post(response_url, {
     response_type: 'ephemeral',
     text: response,
-    //   blocks: [
-    //     {
-    //       'type': 'header',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'Common',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       type: 'rich_text',
-    //       elements: [
-    //         {
-    //           type: 'rich_text_list',
-    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'react-labs', style: { bold: true } }] }
-    //           ],
-    //           style: 'bullet',
-    //           indent: 1
-    //         },
-    //         {
-    //           type: 'rich_text_list',
-    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'chip' }] }
-    //           ],
-    //           style: 'bullet',
-    //           indent: 2
-    //         },
-    //         {
-    //           type: 'rich_text_list',
-    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'modal working for sending card to be sign for multi bdays.' }] }
-    //           ],
-    //           style: 'bullet',
-    //           indent: 3
-    //         },
-    //         {
-    //           type: 'rich_text_list',
-    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'fix this and that' }] }
-    //           ],
-    //           style: 'bullet',
-    //           indent: 2
-    //         }
-    //       ]
-    //     },
-    //     {
-    //       type: 'rich_text',
-    //       elements: [{
-    //         type: 'rich_text_list',
-    //         elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'legion' }] }
-    //         ],
-    //         style: 'bullet',
-    //         indent: 1
-    //       }]
-    //     },
-    //     {
-    //       'type': 'divider'
-    //     },
-    //     {
-    //       'type': 'header',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'Atom',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'section',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'This is a plain text section block.',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'divider'
-    //     },
-    //     {
-    //       'type': 'header',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'Locus',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'section',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'This is a plain text section block.',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'divider'
-    //     },
-    //     {
-    //       'type': 'header',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'Data',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'section',
-    //       'text': {
-    //         'type': 'plain_text',
-    //         'text': 'This is a plain text section block.',
-    //         'emoji': true
-    //       }
-    //     },
-    //     {
-    //       'type': 'divider'
-    //     },
-    //   ]
   })
 
 }
@@ -357,81 +222,22 @@ const route = (req, res) => {
   }
   const payload = { response_url, ...input }
 
-  // if (DEPLOYED) {
-  //   lambda.invoke({
-  //     FunctionName: getFuncName('slack'),
-  //     InvocationType: 'Event',
-  //     Payload: JSON.stringify({ type: 'notes', payload }),
-  //   }, (err) => {
-  //     if (err) {
-  //       console.error(err)
-  //       return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to compile' })
-  //     }
-  //     return res.status(200).json({ response_type: 'ephemeral', text: 'Compiling...' })
-  //   })
-  // } else {
-  worker(payload).catch(error => console.log('error >>>', error))
-  // worker(payload).catch(console.error)
-  return res.status(200).json({ response_type: 'ephemeral', text: 'Compiling...' })
-  // }
+  if (DEPLOYED) {
+    lambda.invoke({
+      FunctionName: getFuncName('slack'),
+      InvocationType: 'Event',
+      Payload: JSON.stringify({ type: 'notes', payload }),
+    }, (err) => {
+      if (err) {
+        console.error(err)
+        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to compile' })
+      }
+      return res.status(200).json({ response_type: 'ephemeral', text: 'Compiling...' })
+    })
+  } else {
+    worker(payload).catch(console.error)
+    return res.status(200).json({ response_type: 'ephemeral', text: 'Compiling...' })
+  }
 }
 
 module.exports = { worker, route }
-
-
-/** updates[0].blocks = [
-  {
-    type: 'rich_text',
-    block_id: '2kxf',
-    elements: [ [Object], [Object], [Object], [Object] ]
-  }
-] */
-
-/** updates[0].blocks[0].elements = [
-  { type: 'rich_text_section', elements: [ [Object] ] },
-  {
-    type: 'rich_text_list',
-    elements: [
-      [Object], [Object],
-      [Object], [Object],
-      [Object], [Object],
-      [Object], [Object],
-      [Object]
-    ],
-    style: 'bullet',
-    indent: 0
-  },
-  { type: 'rich_text_section', elements: [ [Object] ] },
-  {
-    type: 'rich_text_list',
-    elements: [ [Object] ],
-    style: 'bullet',
-    indent: 0
-  }
-]*/
-
-/** updates[0].blocks[0].elements[1] = {
-  type: 'rich_text_list',
-  elements: [
-    { type: 'rich_text_section', elements: [Array] },
-    { type: 'rich_text_section', elements: [Array] },
-    { type: 'rich_text_section', elements: [Array] },
-    { type: 'rich_text_section', elements: [Array] },
-    { type: 'rich_text_section', elements: [Array] }
-    ...
-  ],
-  style: 'bullet',
-  indent: 0
-}
-*/
-
-/** updates[0].blocks[0].elements[1].elements[0] = {
-  type: 'rich_text_section',
-  elements: [
-    {
-      type: 'text',
-      text: 'common/legion: modal working for sending card to be sign for multi bdays.'
-    }
-  ]
-}
-*/
