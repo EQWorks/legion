@@ -7,127 +7,174 @@ const DEV_CHANNEL_ID = 'G1FDULP1R'
 const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
 
-const R = /(?<cat>\S+?)(\/(?<t2>\S+))?(:| - )(?<update>.*)/
+const R = /(?<cat>\S+?)(\/(?<t2>\S+))?( - |: )(?<update>.*)/
 const parseSubject = (s) => {
   const matches = s.match(R)
   // unmatched to generic "others" category
   if (!matches) {
-    return ['others', undefined, s.replace(/^\W*\s*/, '')]
+    return ['others', 'others', s]
   }
-  // with T2
+  // with tier 2 for subcategory
   const { groups: { cat, t2, update } } = matches
-  const subCat = t2 && t2.toLowerCase()
+  const subCat = t2 ? t2.toLowerCase() : 'others'
   return [cat.toLowerCase(), subCat, update]
 }
 
-const worker = async ({ channel, response_url, ts }) => {
+const worker = async ({ channel, response_url, ts, text }) => {
+  if (text === 'template') {
+    const getBlock = (text) => (
+      {
+        type: 'rich_text',
+        elements: [
+          {
+            type: 'rich_text_section',
+            elements: [
+              { type: 'text', text}]
+          },
+          {
+            type: 'rich_text_list',
+            elements: [{
+              type: 'rich_text_section',
+              elements: [{ type: 'text', text: text.includes('Common') ? 'react-labs/chip - improved style and color' : ' ' }]
+            }],
+            style: 'bullet',
+            indent: 0
+          },
+        ]
+      }
+    )
+    const blocks = ['Common', 'Atom', 'Snoke', 'Automation', 'Data'].map((project) => (
+      getBlock(`Did - ${project}`)
+    ))
+    blocks.push(getBlock('Doing'))
+    blocks.push(getBlock('Questions'))
+
+    return axios.post(response_url, {
+      response_type: 'ephemeral',
+      blocks
+    })
+  }
+
+  if (channel !== DEV_CHANNEL_ID) {
+    return axios.post(response_url, {
+      response_type: 'ephemeral',
+      blocks: [
+        { type: 'divider' },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: ':x:  Please provide the correct meeting notes link, from the #dev channel',
+          },
+        },
+      ],
+    })
+  }
+
   const { messages: thread } = await web.conversations.replies({ channel, ts })
-  // filter updates from any other messages that could be conversation
+  // filter out any other message that could be conversation including parent note
   const updates = thread.filter(({ text }) => {
     // get the first word of the block of text and check if it is an action
     const { action } = text.match(/(?<action>[^/-]\S+)/).groups
     return action.toLowerCase().match(/did|doing|issues|todo/)
   })
-  const o = {}
+  /** updates = [
+ {
+  client_msg_id: '9e0d7786-423e-488b-8653-811f30c3dff9',
+  type: 'message',
+  text: 'Did - Locus:\n' +
+    '• FO/ML: new `/views` routes\n' +
+    '• FO/ML: expose content field\n' +
+    '• ML Writer: add validation for json fields\n' +
+    '• Atom/Onlia: split auto &amp; home conversions\n' +
+    '• Sales/Bell: translate deck into French\n' +
+    '• HH: calculate coverage metrics\n' +
+    'Doing:\n' +
+    '• ML: look into caching query results',
+  user: 'UU489FGKH',
+  ts: '1603810241.117100',
+  team: 'T1FDR4NG3',
+  blocks: [ [Object] ],
+  thread_ts: '1603807314.106800'
+},
+...]
+ */
+
+  const categorizedData = {}
+  let project = ''
   updates.forEach(({ text, user }) => {
     const isActionDid = []
     const isActionDoing = []
-    const isActionIssues = []
+    const isActionQuestions = []
     const _input = text.split('\n')
     _input.forEach((line, i) => {
       if (line.toLowerCase().match(/^did/)) isActionDid.push(i)
       if (line.toLowerCase().match(/^doing/)) isActionDoing.push(i)
-      if (line.toLowerCase().match(/^issue/)) isActionIssues.push(i)
+      if (line.toLowerCase().match(/^question/)) isActionQuestions.push(i)
     })
     const did = isActionDid.length ? _input.slice(isActionDid[0], isActionDoing[0]) : []
-    const doing = isActionDoing.length && _input.slice(isActionDoing[0], isActionIssues[0])
-    const issues = isActionIssues.length && _input.slice(isActionIssues[0])
+    // const doing = isActionDoing.length && _input.slice(isActionDoing[0], isActionQuestions[0])
+    // const question = isActionQuestions.length && _input.slice(isActionQuestions[0])
 
     did.forEach((input) => {
-      if (input.toLowerCase().match(/^did/)) return
-      const [cat, subCat, update] = parseSubject(input)
-      const _subCat = subCat || 'others'
-      const _update = `${update} (<@${user}>)`
+      // 'Did - Locus:'
+      if (input.toLowerCase().match(/^did/)) {
+        const { groups: { main_project } } = input.match(/(?<action>\w+)(\W*)(?<main_project>[A-Za-z]*)?/) || {}
+        project = main_project ? main_project.toLowerCase() : 'others'
+        categorizedData[project] = { ...categorizedData[project] }
+        // categorizedData: { locus: {}}
+        return
+      }
+      const [repo, subCat, _update] = parseSubject(input.replace(/^\W*\s*/, ''))
+      const update = `${_update} (<@${user}>)`
 
-      if (o[cat]) {
-        if(o[cat][_subCat]){
-          o[cat][_subCat] = [...o[cat][_subCat], _update]
+      if (categorizedData[project][repo]) {
+        if (categorizedData[project][repo][subCat]) {
+          categorizedData[project][repo][subCat].push(update)
         } else {
-          o[cat][_subCat] = [ _update]
+          categorizedData[project][repo][subCat] = [update]
         }
       } else {
-        o[cat] = {[_subCat]: [_update]}
+        categorizedData[project][repo] = { [subCat]: [update] }
       }
     })
+    /**
+     categorizedData = {
+      common: {
+        release: { others: [Array], nlp: [Array] },
+        avail: { others: [Array] }
+      },
+      locus: {
+        snoke: { builder: [Array], devops: [Array] },
+        hub: { others: [Array] },
+        firstorder: { builder: [Array] }
+      },
+      data: { data: { gam: [Array], others: [Array] } }
+    }
+     */
   })
+
   let response = ''
-  Object.entries(o).forEach(([project, details]) => {
-    response += `\n\n ${project.toUpperCase()} \n`
-    Object.entries(details).forEach(([subProject, content]) => {
-      if (subProject !== 'others') response += `*_${subProject}_* \n`
-      content.forEach((update) => (response += `• ${update} \n`))
+  Object.entries(categorizedData).forEach(([project, details]) => {
+    if (project !== 'others') response += `\n\n\n ${project.toUpperCase()} \n`
+    Object.entries(details).forEach(([repo, updates]) => {
+      response += `\n\n*_${repo}_* \n`
+      Object.entries(updates).forEach(([subCat, content]) => {
+        if (subCat === 'others') {
+          content.forEach((input) => (response += `    • ${input} \n`))
+        } else {
+          response += `    *_${subCat}_* \n`
+          content.forEach((input) => (response += `          • ${input} \n`))
+        }
+      })
     })
   })
-
-  /** updates = [
-   {
-    client_msg_id: '9e0d7786-423e-488b-8653-811f30c3dff9',
-    type: 'message',
-    text: 'Did:\n' +
-      '• FO/ML: new `/views` routes\n' +
-      '• FO/ML: expose content field\n' +
-      '• ML Writer: add validation for json fields\n' +
-      '• Atom/Onlia: split auto &amp; home conversions\n' +
-      '• Sales/Bell: translate deck into French\n' +
-      '• HH: calculate coverage metrics\n' +
-      'Doing:\n' +
-      '• ML: look into caching query results',
-    user: 'UU489FGKH',
-    ts: '1603810241.117100',
-    team: 'T1FDR4NG3',
-    blocks: [ [Object] ],
-    thread_ts: '1603807314.106800'
-  },
-  ...]
-   */
-
-  /** updates[0].blocks = [
-    {
-      type: 'rich_text',
-      block_id: '2kxf',
-      elements: [ [Object], [Object], [Object], [Object] ]
-    }
-  ] */
-
-  /** updates[0].blocks[0].elements = [
-    { type: 'rich_text_section', elements: [ [Object] ] },
-    {
-      type: 'rich_text_list',
-      elements: [
-        [Object], [Object],
-        [Object], [Object],
-        [Object], [Object],
-        [Object], [Object],
-        [Object]
-      ],
-      style: 'bullet',
-      indent: 0
-    },
-    { type: 'rich_text_section', elements: [ [Object] ] },
-    {
-      type: 'rich_text_list',
-      elements: [ [Object] ],
-      style: 'bullet',
-      indent: 0
-    }
-  ]*/
-
   //---------------------
+  // to use blocks instead of text
   // const o = {}
-  // updates.forEach(u => console.log(u.blocks))
   // updates.forEach(({
   //   text,
-  //   blocks: [{ elements: [did, did_input, doing, doing_input] }], //can be more than 4?
+  //   blocks: [{ elements: [did, did_input, ...rest] }],
   //   user
   // }) => {
   //   did_input.elements.forEach(({ elements: [{ text: input }] }) => {
@@ -143,40 +190,141 @@ const worker = async ({ channel, response_url, ts }) => {
   //     //   o[t1] = {}
   //     // }
   //   })
-
   // })
   //---------------------
   return axios.post(response_url, {
     response_type: 'ephemeral',
-    text:response
+    text: response,
+    //   blocks: [
+    //     {
+    //       'type': 'header',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'Common',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       type: 'rich_text',
+    //       elements: [
+    //         {
+    //           type: 'rich_text_list',
+    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'react-labs', style: { bold: true } }] }
+    //           ],
+    //           style: 'bullet',
+    //           indent: 1
+    //         },
+    //         {
+    //           type: 'rich_text_list',
+    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'chip' }] }
+    //           ],
+    //           style: 'bullet',
+    //           indent: 2
+    //         },
+    //         {
+    //           type: 'rich_text_list',
+    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'modal working for sending card to be sign for multi bdays.' }] }
+    //           ],
+    //           style: 'bullet',
+    //           indent: 3
+    //         },
+    //         {
+    //           type: 'rich_text_list',
+    //           elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'fix this and that' }] }
+    //           ],
+    //           style: 'bullet',
+    //           indent: 2
+    //         }
+    //       ]
+    //     },
+    //     {
+    //       type: 'rich_text',
+    //       elements: [{
+    //         type: 'rich_text_list',
+    //         elements: [{ type: 'rich_text_section', elements: [{ type: 'text', text: 'legion' }] }
+    //         ],
+    //         style: 'bullet',
+    //         indent: 1
+    //       }]
+    //     },
+    //     {
+    //       'type': 'divider'
+    //     },
+    //     {
+    //       'type': 'header',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'Atom',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'section',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'This is a plain text section block.',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'divider'
+    //     },
+    //     {
+    //       'type': 'header',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'Locus',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'section',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'This is a plain text section block.',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'divider'
+    //     },
+    //     {
+    //       'type': 'header',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'Data',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'section',
+    //       'text': {
+    //         'type': 'plain_text',
+    //         'text': 'This is a plain text section block.',
+    //         'emoji': true
+    //       }
+    //     },
+    //     {
+    //       'type': 'divider'
+    //     },
+    //   ]
   })
 
 }
 
 const route = (req, res) => {
   const { text, response_url } = req.body
-
-  // text = <https://eqworks.slack.com/archives/G1FDULP1R/p1603807314106800>
-  const r = /<https:\/\/eqworks.slack.com\/archives\/(?<channel>.*)\/p(?<timestamp>.*)>/
-  const { groups: { channel, timestamp } } = text.match(r)
-  if (channel !== DEV_CHANNEL_ID) {
-    return axios.post(response_url, {
-      response_type: 'ephemeral',
-      blocks: [
-        { type: 'divider' },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: 'Please provide the correct meeting notes link, from the #dev channel',
-          },
-        },
-      ],
-    })
+  const input = { text }
+  if (text !== 'template') {
+    // text = <https://eqworks.slack.com/archives/G1FDULP1R/p1603807314106800>
+    const r = /<https:\/\/eqworks.slack.com\/archives\/(?<channel>.*)\/p(?<timestamp>.*)>/
+    const { groups: { channel, timestamp } } = text.match(r)
+    const ts = (Number(timestamp) / 1000000).toFixed(6)
+    delete input.text
+    input.channel = channel
+    input.ts = ts
   }
-  const ts = (Number(timestamp) / 1000000).toFixed(6)
-
-  const payload = { response_url, ts, channel }
+  const payload = { response_url, ...input }
 
   // if (DEPLOYED) {
   //   lambda.invoke({
@@ -198,3 +346,61 @@ const route = (req, res) => {
 }
 
 module.exports = { worker, route }
+
+
+/** updates[0].blocks = [
+  {
+    type: 'rich_text',
+    block_id: '2kxf',
+    elements: [ [Object], [Object], [Object], [Object] ]
+  }
+] */
+
+/** updates[0].blocks[0].elements = [
+  { type: 'rich_text_section', elements: [ [Object] ] },
+  {
+    type: 'rich_text_list',
+    elements: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    style: 'bullet',
+    indent: 0
+  },
+  { type: 'rich_text_section', elements: [ [Object] ] },
+  {
+    type: 'rich_text_list',
+    elements: [ [Object] ],
+    style: 'bullet',
+    indent: 0
+  }
+]*/
+
+/** updates[0].blocks[0].elements[1] = {
+  type: 'rich_text_list',
+  elements: [
+    { type: 'rich_text_section', elements: [Array] },
+    { type: 'rich_text_section', elements: [Array] },
+    { type: 'rich_text_section', elements: [Array] },
+    { type: 'rich_text_section', elements: [Array] },
+    { type: 'rich_text_section', elements: [Array] }
+    ...
+  ],
+  style: 'bullet',
+  indent: 0
+}
+*/
+
+/** updates[0].blocks[0].elements[1].elements[0] = {
+  type: 'rich_text_section',
+  elements: [
+    {
+      type: 'text',
+      text: 'common/legion: modal working for sending card to be sign for multi bdays.'
+    }
+  ]
+}
+*/
