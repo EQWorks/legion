@@ -43,7 +43,7 @@ const worker = async ({ channel, response_url, ts, text }) => {
         ]
       }
     )
-    const blocks = ['Common', 'Atom', 'Snoke', 'Automation', 'Data'].map((project) => (
+    const blocks = ['Common', 'Atom', 'Locus', 'Automation', 'Data'].map((project) => (
       getBlock(`Did - ${project}`)
     ))
     blocks.push(getBlock('Doing'))
