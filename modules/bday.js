@@ -1,6 +1,18 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
-const { lambda, getFuncName  } = require('./util')
+const { lambda, getFuncName } = require('./util')
+const {
+  _blocks,
+  button,
+  removeButton,
+  signMessage,
+  customMessage,
+  sendText,
+  sendBlocks,
+  sendConfirmation,
+  defaultBlock,
+  celebrateBlocks,
+} = require('./bday-blocks')
 
 
 const GENERAL_CHANNEL_ID = 'C1FDR4QJF'
@@ -38,216 +50,241 @@ const confirmChannel = (response_url, cmd, channel) => (
   })
 )
 
-const worker = async ({ command, channel_id, response_url, user_id }) => {
+const worker = async ({
+  command,
+  channel_id,
+  response_url,
+  trigger_id,
+  type,
+  view_id,
+  hash,
+  data,
+  blocks,
+  action,
+  ref,
+  sender,
+}) => {
   // send card for members to sign
-  if (command.includes('sign') && command.includes('for')) {
-    // make sure to execute command from #general
-    if (channel_id !== GENERAL_CHANNEL_ID) {
-      const { channel: { name } } = await web.conversations.info({ channel: GENERAL_CHANNEL_ID })
-      return confirmChannel(response_url, 'sign', name)
-    }
-    // sign URL for @user_id|user_name
-    const R = /<(?<MIRO_URL>.*)> for <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)>/
-    const matches = command.match(R)
-    // notify user of invalid input
-    if (!matches) {
-      return invalidInputNotice(response_url, command)
-    }
-    // send to every member in #general excluding bday person
-    const { groups: { MIRO_URL, BDAY_USER_ID } } = matches
-    const bdayPerson = await web.users.info({ user: BDAY_USER_ID })
-    const { user: { real_name: bdayPersonFullName } } = bdayPerson
-    const { members } = await web.conversations.members({ channel: channel_id })
-    members.splice(members.findIndex((m) => m === BDAY_USER_ID), 1)
-    // return web.conversations.open({ users: members.toString() })
-    return Promise.all(
-      members.map((channel) => web.chat.postMessage({
-        channel,
-        text: [
-          `:tada: Birthday Alert for ${bdayPersonFullName} :tada:`,
-          `*${bdayPersonFullName}'s* birthday is coming up soon! Take some time and leave a nice message for ${bdayPersonFullName} to read. Thanks! :smile:`,
-          `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
-        ].join('\n'),
-        blocks: [
-          {
-            'type': 'header',
-            'text': {
-              'type': 'plain_text',
-              'text': `:tada: Birthday Alert for ${bdayPersonFullName} :tada:`,
-              'emoji': true
-            }
+  if (command === 'sign') {
+    // first iteration returns modal
+    if (!type) {
+      // make sure to execute command from #general
+      if (channel_id !== GENERAL_CHANNEL_ID) {
+        const { channel: { name } } = await web.conversations.info({ channel: GENERAL_CHANNEL_ID })
+        return confirmChannel(response_url, 'sign', name)
+      }
+      const state = {
+        response_url,
+        channel_id,
+        ref: 1,
+        command: 'sign',
+      }
+      return web.views.open({
+        trigger_id,
+        view: {
+          'callback_id': 'bday',
+          'private_metadata': JSON.stringify(state),
+          'type': 'modal',
+          'title': {
+            'type': 'plain_text',
+            'text': 'Bday details'
           },
-          {
-            'type': 'section',
-            'text': {
-              'type': 'mrkdwn',
-              'text':  `*${bdayPersonFullName}*'s birthday is coming up soon! Take some time and leave a nice message for ${bdayPersonFullName} to read. Thanks! :smile:`
-            }
+          'blocks': [..._blocks(state.ref), button],
+          'close': {
+            'type': 'plain_text',
+            'text': 'Nevermind'
           },
-          {
-            'type': 'section',
-            'text': {
-              'type': 'mrkdwn',
-              'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to sign! Instructions are found inside the card.`
-            }
-          }
-        ]
-      }))
-    )
-      .then(() => {
+          'submit': {
+            'type': 'plain_text',
+            'text': 'Send'
+          },
+        }
+      })
+    }
+
+    // when more fields are added
+    if (type === 'block_actions' && action.block_id === 'manage_fields') {
+      let updatedBlocks
+      const _buttons = blocks.pop()
+
+      if (action.action_id === 'add') {
+        if (blocks.length === 3) {
+          _buttons.elements.push(removeButton)
+        }
+        updatedBlocks = [...blocks, ..._blocks(ref + 1), _buttons]
+      } else {
+        blocks.splice(-3)
+        if (blocks.length === 3) {
+          updatedBlocks = [...blocks, button]
+        } else {
+          updatedBlocks = [...blocks, _buttons]
+        }
+      }
+      const private_metadata = JSON.stringify({ ref: ref + 1, response_url, command, channel_id })
+      return web.views.update({
+        view_id,
+        hash,
+        view: {
+          private_metadata,
+          'callback_id': 'bday',
+          'type': 'modal',
+          'title': {
+            'type': 'plain_text',
+            'text': 'Bday details'
+          },
+          'blocks': updatedBlocks,
+          'close': {
+            'type': 'plain_text',
+            'text': 'Nevermind'
+          },
+          'submit': {
+            'type': 'plain_text',
+            'text': 'Send'
+          },
+        },
+      })
+    }
+
+    // upon modal submission
+    if (type === 'view_submission') {
+      // send to every member in #general excluding bday person
+      const { members } = await web.conversations.members({ channel: channel_id })
+
+      for (let [user_index, { id }] of Object.entries(data)) {
+        members.splice(members.findIndex((m) => m === id), 1)
+        const { user: { real_name } } = await web.users.info({ user: id })
+        data[user_index].fullName = real_name
+      }
+
+      const bdayData = Object.values(data)
+      const { text, blocks, confirmation } = signMessage(bdayData, sender)
+
+      // return web.conversations.open({ users: members.toString() })
+      return Promise.all(
+        members.map((channel) => web.chat.postMessage({
+          channel,
+          text,
+          blocks,
+        }))
+      ).then(() => {
         // notify user invitation has been sent
         return axios.post(response_url, {
           response_type: 'ephemeral',
-          blocks: [
-            {
-              'type': 'header',
-              'text': {
-                'type': 'plain_text',
-                'text': `Card has been sent for signing to everyone except ${bdayPersonFullName}! :tada:`,
-                'emoji': true
-              }
-            },
-            {
-              'type': 'section',
-              'text': {
-                'type': 'mrkdwn',
-                'text': 'Thanks for spreading some love! :smile:'
-              }
-            },
-            {
-              'type': 'divider'
-            },
-            {
-              'type': 'context',
-              'elements': [
-                {
-                  'type': 'plain_text',
-                  'text': `Card link: ${MIRO_URL}`,
-                  'emoji': true
-                }
-              ]
-            }
-            
-          ]
+          blocks: confirmation
         })
-      })
-      .catch((e) => {
+      }).catch((e) => {
         return axios.post(response_url, {
           response_type: 'ephemeral',
           text: `Something went wrong: ${e}.`,
         })
       })
+    }
   }
 
   // send card to bday user
-  if (command.includes('send') && command.includes('to')) {
-    const R = /<(?<MIRO_URL>.*)> to <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)>/
-    const RwithMessage = /<(?<MIRO_URL>.*)> to <@(?<BDAY_USER_ID>.*)\|(?<BDAY_USER_NAME>.*)> (?<CUSTOM_MESSAGE>.*)/
-    const matches = command.match(R)
-    const matchesWithOptMessage = command.match(RwithMessage)
-
-    // notify user of invalid input
-    if (!matches) {
-      return invalidInputNotice(response_url, command)
-    }
-    // send to bday user
-    const { groups: { MIRO_URL, BDAY_USER_ID } } = matches
-    const sender = await web.users.info({ user: user_id })
-    const bdayPerson = await web.users.info({ user: BDAY_USER_ID })
-    const { user: { real_name: bdayPersonFullName } } = bdayPerson
-    const { user: { real_name: senderFullName } } = sender
-
-    const renderedText = (!matchesWithOptMessage)
-      ? 'Hope you have a wonderful day and eat lots of cake on behalf of all of us! :birthday:'
-      : matchesWithOptMessage['groups']['CUSTOM_MESSAGE']
-    return web.chat.postMessage({
-      channel: BDAY_USER_ID,
-      text: [
-        `:tada: Happy Birthday ${bdayPersonFullName}! :tada:`,
-        renderedText,
-        `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`,
-        `- From ${senderFullName} on behalf of EQ`
-      ].join('\n'),
-      blocks: [
-        {
-          'type': 'header',
-          'text': {
+  if (command === 'send') {
+    // first iteration returns modal
+    if (!type) {
+      const state = {
+        response_url,
+        ref: 1,
+        command: 'send',
+      }
+      return web.views.open({
+        trigger_id,
+        view: {
+          'callback_id': 'bday',
+          'private_metadata': JSON.stringify(state),
+          'type': 'modal',
+          'title': {
             'type': 'plain_text',
-            'text': `:tada: Happy Birthday ${bdayPersonFullName}! :tada:`,
-            'emoji': true
-          }
-        },
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': renderedText
-          }
-        },
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': `Click :point_right: <${MIRO_URL}|here> :point_left: to see the birthday card!`
-          }
-        },
-        {
-          'type': 'divider'
-        },
-        {
-          'type': 'context',
-          'elements': [
-            {
-              'type': 'plain_text',
-              'text': `From ${senderFullName} on behalf of EQ`,
-              'emoji': true
-            }
-          ]
+            'text': 'Send bday card'
+          },
+          'blocks': [..._blocks(state.ref), customMessage(state.ref), button],
+          'close': {
+            'type': 'plain_text',
+            'text': 'Nevermind'
+          },
+          'submit': {
+            'type': 'plain_text',
+            'text': 'Send'
+          },
         }
-      ]
-    })
-      .then(() => {
-        // notify user bday card has been sent
+      })
+    }
+
+    // when more fields are added
+    if (type === 'block_actions' && action.block_id === 'manage_fields') {
+      let updatedBlocks
+      const _buttons = blocks.pop()
+
+      if (action.action_id === 'add') {
+        if (blocks.length === 4) {
+          _buttons.elements.push(removeButton)
+        }
+        updatedBlocks = [...blocks, ..._blocks(ref + 1), customMessage(ref + 1), _buttons]
+      } else {
+        blocks.splice(-4)
+        if (blocks.length === 4) {
+          updatedBlocks = [...blocks, button]
+        } else {
+          updatedBlocks = [...blocks, _buttons]
+        }
+      }
+      const private_metadata = JSON.stringify({ ref: ref + 1, response_url, command })
+      return web.views.update({
+        view_id,
+        hash,
+        view: {
+          private_metadata,
+          'callback_id': 'bday',
+          'type': 'modal',
+          'title': {
+            'type': 'plain_text',
+            'text': 'Send bday card'
+          },
+          'blocks': updatedBlocks,
+          'close': {
+            'type': 'plain_text',
+            'text': 'Nevermind'
+          },
+          'submit': {
+            'type': 'plain_text',
+            'text': 'Send'
+          },
+        },
+      })
+    }
+
+    // upon modal submission
+    if (type === 'view_submission') {
+      for (let [user_index, { id }] of Object.entries(data)) {
+        const { user: { real_name } } = await web.users.info({ user: id })
+        data[user_index].fullName = real_name
+      }
+
+      const bdayData = Object.values(data)
+
+      // send to bday user
+      return Promise.all(
+        bdayData.map(({ id, url, fullName, message }) => web.chat.postMessage({
+          channel: id,
+          text: sendText({ url, fullName, message, sender }),
+          blocks: sendBlocks({ url, fullName, message, sender }),
+        }))
+      ).then(() => {
+        // notify user invitation has been sent
         return axios.post(response_url, {
           response_type: 'ephemeral',
-          blocks: [
-            {
-              'type': 'header',
-              'text': {
-                'type': 'plain_text',
-                'text': `Card has been sent to ${bdayPersonFullName}! :tada:`,
-                'emoji': true
-              }
-            },
-            {
-              'type': 'section',
-              'text': {
-                'type': 'mrkdwn',
-                'text': 'Thanks for spreading some love! :smile:'
-              }
-            },
-            {
-              'type': 'divider'
-            },
-            {
-              'type': 'context',
-              'elements': [
-                {
-                  'type': 'plain_text',
-                  'text': `Card link: ${MIRO_URL}`,
-                  'emoji': true
-                }
-              ]
-            }
-          ],
+          blocks: sendConfirmation(bdayData)
         })
-      })
-      .catch((e) => {
+      }).catch((e) => {
         return axios.post(response_url, {
           response_type: 'ephemeral',
           text: `Something went wrong: ${e}.`,
         })
       })
+    }
   }
 
   // announce in channel
@@ -278,60 +315,26 @@ const worker = async ({ command, channel_id, response_url, user_id }) => {
         `@here It's @${BDAY_USER_NAME}'s birthday today!`,
         renderedText,
       ].join('\n'),
-      blocks: [
-        {
-          'type': 'header',
-          'text': {
-            'type': 'plain_text',
-            'text': ':tada: Birthday Alert :tada:',
-            'emoji': true
-          }
-        },
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': `@here It's @${BDAY_USER_NAME}'s birthday today! ${renderedText}`
-          }
-        },
-        {
-          'type': 'image',
-          'image_url': 'https://media.giphy.com/media/IQF90tVlBIByw/giphy.gif',
-          'alt_text': 'minion birthday'
-        }
-      ]
+      blocks: celebrateBlocks(BDAY_USER_NAME, renderedText),
     })
   }
 
   // default return for missing params
   return axios.post(response_url, {
     response_type: 'ephemeral',
-    blocks: [
-      { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'Oops! Missing some required keywords! Please see the following guide on how to use the */bday* command:'
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: [
-            '(1) */bday* sign <URL> for @bday-user',
-            '(2) */bday* send <URL> to @bday-user',
-            '(3) */bday* celebrate for @bday-user',
-          ].join('\n'),
-        },
-      },
-    ],
+    blocks: defaultBlock,
   })
 }
 
 const route = (req, res) => {
-  const { text = '', response_url, channel_id, user_id } = req.body
+  const {
+    text = '',
+    response_url,
+    channel_id,
+    user_id,
+    trigger_id,
+  } = req.body
+
   const validCmd = text.match(/sign|send|celebrate/)
   if (text !== '' && !validCmd) {
     return res.status(200).json({
@@ -340,7 +343,7 @@ const route = (req, res) => {
     })
   }
 
-  const payload = { command: text, response_url, channel_id, user_id }
+  const payload = { 'command': text, response_url, channel_id, sender: user_id, trigger_id }
 
   if (DEPLOYED) {
     lambda.invoke({
@@ -352,15 +355,27 @@ const route = (req, res) => {
         console.error(err)
         return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to process bday command' })
       }
-      return res.status(200).json({ response_type: 'ephemeral', text: 'Got it! Processing your bday commands now...' })
+      if (text.match(/sign|send/)) {
+        return res.status(200).json({
+          response_type: 'ephemeral',
+          text: 'Got it! But I will need more details...'
+        })
+      } else {
+        // celebrate doens't need more details yet
+        return res.sendStatus(200)
+      }
     })
   } else {
     worker(payload).catch(console.error)
-    return res.status(200).json({
-      response_type: 'ephemeral',
-      text: 'Got it! Processing your bday commands now...'
-    })
+    if (text.match(/sign|send/)) {
+      return res.status(200).json({
+        response_type: 'ephemeral',
+        text: 'Got it! But I will need more details...'
+      })
+    } else {
+      // celebrate doens't need more details yet
+      return res.sendStatus(200)
+    }
   }
 }
-
 module.exports = { worker, route }

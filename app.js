@@ -5,10 +5,11 @@ const axios = require('axios')
 
 const modules = require('./modules')
 const { verifySlack } = require('./modules/middleware')
+const { bdayInteractive } = require('./modules/bday-interactive')
+const { lambda, getFuncName } = require('./modules/util')
 
+const { DEPLOYED } = process.env
 const app = express()
-
-const { updateTask } = require('@eqworks/avail-bot')
 
 const rawBodyBuffer = (req, _, buf, encoding) => {
   if (buf && buf.length) {
@@ -16,7 +17,7 @@ const rawBodyBuffer = (req, _, buf, encoding) => {
   }
 }
 
-app.use(bodyParser.urlencoded({verify: rawBodyBuffer, extended: true }))
+app.use(bodyParser.urlencoded({ verify: rawBodyBuffer, extended: true }))
 app.use(bodyParser.json({ verify: rawBodyBuffer }))
 
 app.get('/', (_, res, next) => {
@@ -83,37 +84,76 @@ e.g.
 */
 app.use('/interactive', (req, res) => {
   const parsed = JSON.parse(req.body.payload)
-  const {
-    // type,
-    response_url,
-    // user,
-    // channel: { id, name },
-    // TODO when would this be .length > 1
-    actions: [{
-      value: action_value,
-      // style,
-      // type: action_type,
-      // text: { text },
-    }],
 
+  const {
+    type,
+    view: {
+      id,
+      hash,
+      callback_id,
+      private_metadata,
+      state: { values }, // only available from submission
+      blocks,
+    },
+    actions = [],
+    user: { id: sender },
+    // much more avb inside, check documentation
   } = parsed
-  // value standard: '[module] // param-1 // ...param-N'
-  const [module, taskId, customFieldId, value] = action_value.split(' // ')
-  if (module === 'vacay') {
-    updateTask(taskId, { custom_fields: { [customFieldId]: value }})
-      .then(res => {
-        const { assignee: { name }, start_on, due_on, custom_fields } = res
-        const status = custom_fields.find(o => o.name === 'Status').enum_value.name
-        const date = start_on ? `${start_on} - ${due_on}` : due_on
-        axios.post(response_url, {
-          text: `Updated *${name}'s* vacation on *${date}* to *${status}*`,
-          mrkdwn: true,
-          response_type: 'ephemeral',
-          replace_original: false,
-        })
+
+  if (callback_id === 'bday') {
+    // manipulate data received from submission
+    const { data = {}, errors = {} } = bdayInteractive({ type, values })
+    if (Object.values(errors).length) {
+      return res.status(200).json({ response_action: 'errors', errors })
+    }
+    const {
+      ref,
+      response_url,
+      command,
+      channel_id,
+    } = JSON.parse(private_metadata)
+
+    const payload = {
+      ref,
+      command,
+      type,
+      view_id: id,
+      hash,
+      response_url,
+      data,
+      blocks,
+      action: actions[0] || [],
+      channel_id,
+      sender
+    }
+
+    const { worker } = modules['bday']
+
+    if (DEPLOYED) {
+      lambda.invoke({
+        FunctionName: getFuncName('slack'),
+        InvocationType: 'Event',
+        Payload: JSON.stringify({ type: 'bday', payload }),
+      }, (err) => {
+        if (err) {
+          console.error(err)
+          return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to process bday command' })
+        }
+        if (type === 'view_submission') {
+          return res.status(200).json({ 'response_action': 'clear' })
+        }
+        return res.sendStatus(200)
       })
+    } else {
+      worker(payload).catch(console.error)
+      if (type === 'view_submission') {
+        // needs to have only <response_action> for modals submission
+        return res.status(200).json({ 'response_action': 'clear' })
+      }
+      // modal interactions need to have acknowledgement
+      return res.sendStatus(200)
+    }
   }
-  return res.status(200) // mandatory response
 })
 
 // catch-all error handler
