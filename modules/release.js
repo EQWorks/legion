@@ -21,6 +21,7 @@ const VER_POS = {
   'major': 0,
   'minor': 1,
   'patch': 2,
+  'dev': 2,
 }
 const GROUPS = {
   snoke: ['firstorderteam', 'snoketeam'],
@@ -43,7 +44,7 @@ const getNextVersion = async ({ repo, stage = 'dev' }) => {
   })
   const latest = tag_name.replace(/[^0-9.]/g, '').split('.').map(Number) // extract semver x.y.z
   latest[VER_POS[stage]] += 1
-  return latest.join('.')
+  return `v${latest.join('.')}`
 }
 
 const isPre = ({ repo, stage = 'dev' }) => !isVersioned(repo) && stage.toLowerCase() === 'dev'
@@ -81,11 +82,11 @@ const route = (req, res) => {
   const groups = GROUPS[repo.toLowerCase()]
   const wip = {
     response_type: 'ephemeral',
-    text: `Releasing ${repo} (${stage})...`,
+    text: `Releasing ${repo}${stage ? ` (${stage})` : ''}...`,
   }
   return userInGroup({ user_id, groups }).then((can) => {
     if (!can) {
-      return res.status(200).json({ response_type: 'ephemeral', text: `You cannot release ${repo} (${stage})` })
+      return res.status(200).json({ response_type: 'ephemeral', text: `You cannot release ${repo}${stage ? ` (${stage})` : ''}` })
     }
     const payload = { repo, stage, response_url }
     if (!DEPLOYED) {
@@ -95,7 +96,7 @@ const route = (req, res) => {
     return invokeSlackWorker({ type: 'release', payload })
   }).then(() => res.status(200).json(wip)).catch((err) => {
     console.error(err)
-    return res.status(200).json({ response_type: 'ephemeral', text: `Fail to release ${repo} (${stage})` })
+    return res.status(200).json({ response_type: 'ephemeral', text: `Fail to release ${repo}${stage ? ` (${stage})` : ''}` })
   })
 }
 
