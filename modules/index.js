@@ -6,6 +6,7 @@ const vacay = require('./vacation')
 const slack = require('./slack')
 const notes = require('./notes')
 const bday = require('./bday')
+const release = require('./release')
 
 
 module.exports = {
@@ -17,4 +18,5 @@ module.exports = {
   slack,
   notes,
   bday,
+  release,
 }
