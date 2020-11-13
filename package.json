@@ -22,7 +22,7 @@
     "tsscmp": "^1.0.6"
   },
   "engines": {
-    "node": "14.x"
+    "node": "12.x"
   },
   "repository": {
     "url": "https://glitch.com/edit/#!/welcome-project"

@@ -49,7 +49,7 @@ const getNextVersion = async ({ repo, stage = 'dev' }) => {
 
 const isPre = ({ repo, stage = 'dev' }) => !isVersioned(repo) && stage.toLowerCase() === 'dev'
 
-const formatRepoStage = ({ repo, stage }) => isVersioned(repo) ? repo : `${repo} (${stage ?? 'unknown stage'})}`
+const formatRepoStage = ({ repo, stage }) => isVersioned(repo) ? repo : `${repo} (${stage || 'unknown stage'})}`
 
 const worker = async ({ repo, stage = 'dev', response_url }) => {
   const r = {
