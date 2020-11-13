@@ -27,3 +27,5 @@ module.exports.getGroupUsers = (groups) => this.listUserGroups()
   .then((g) => g.map(({ users }) => users).flat())
   .then((u) => Array.from(new Set(u)))
 module.exports.userInGroup = ({ user_id, groups }) => this.getGroupUsers(groups).then(u => u.includes(user_id))
+
+module.exports.errMsg = (err) => `\`\`\`${err.toString()}\`\`\``

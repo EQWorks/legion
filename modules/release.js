@@ -1,6 +1,6 @@
 const axios = require('axios')
 
-const { userInGroup, invokeSlackWorker } = require('./util')
+const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
 
 const { GITHUB_USER = 'woozyking', GITHUB_TOKEN, DEPLOYED = false } = process.env
@@ -49,12 +49,15 @@ const getNextVersion = async ({ repo, stage = 'dev' }) => {
 
 const isPre = ({ repo, stage = 'dev' }) => !isVersioned(repo) && stage.toLowerCase() === 'dev'
 
+const formatRepoStage = ({ repo, stage }) => isVersioned(repo) ? repo : `${repo} (${stage ?? 'unknown stage'})}`
+
 const worker = async ({ repo, stage = 'dev', response_url }) => {
   const r = {
     response_type: 'ephemeral',
-    text: `${repo} (${stage}) cannot be released`,
+    text: `${formatRepoStage({ repo, stage })} cannot be released`,
   }
   const tag_name = await getNextVersion({ repo, stage })
+  const repoTag = `${repo} (${tag_name})`
   try {
     const { data = {} } = await axios({
       ...BASE_OPTS,
@@ -67,26 +70,24 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
       },
     })
     if (data.html_url) {
-      r.text = `<${data.html_url}|${repo} (${tag_name}) released>`
+      r.text = `<${data.html_url}|${repoTag} released>`
     }
-  } catch (error) {
-    r.text = `${repo} (${tag_name}) cannot be released:\n\`\`\`${error.toString()}\`\`\``
+  } catch (err) {
+    console.error(err)
+    r.text = `Fail to release ${repoTag}:\n${errMsg(err)}`
   }
   return axios.post(response_url, { replace_original: true, ...r })
 }
 
 const route = (req, res) => {
-  const { user_id, text, response_url } = req.body
-  const [repo, stage] = text.split(/\s+/)
-  // get repo groups
-  const groups = GROUPS[repo.toLowerCase()]
-  const wip = {
-    response_type: 'ephemeral',
-    text: `Releasing ${repo}${stage ? ` (${stage})` : ''}...`,
-  }
+  const { user_id, text, response_url } = req.body // extract payload from slash command
+  const [repo, stage] = text.trim().split(/\s+/) // parse out repo[, stage or semver-severity]
+  const groups = GROUPS[repo.toLowerCase()] // slack usergroups allowed to release
+  const repoStage = formatRepoStage({ repo, stage })
+  const response_type = 'ephemeral'
   return userInGroup({ user_id, groups }).then((can) => {
     if (!can) {
-      return res.status(200).json({ response_type: 'ephemeral', text: `You cannot release ${repo}${stage ? ` (${stage})` : ''}` })
+      return res.status(200).json({ response_type, text: `You cannot release ${repoStage}` })
     }
     const payload = { repo, stage, response_url }
     if (!DEPLOYED) {
@@ -94,9 +95,9 @@ const route = (req, res) => {
       return
     }
     return invokeSlackWorker({ type: 'release', payload })
-  }).then(() => res.status(200).json(wip)).catch((err) => {
+  }).then(() => res.status(200).json({ response_type, text: `Releasing ${repoStage}...` })).catch((err) => {
     console.error(err)
-    return res.status(200).json({ response_type: 'ephemeral', text: `Fail to release ${repo}${stage ? ` (${stage})` : ''}` })
+    return res.status(200).json({ response_type, text: `Fail to release ${repoStage}:\n${errMsg(err)}` })
   })
 }
 
