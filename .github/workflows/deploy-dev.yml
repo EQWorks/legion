@@ -10,9 +10,6 @@ on:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [12.x]
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -20,7 +17,7 @@ jobs:
       - name: Set Node.js version
         uses: actions/setup-node@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 14.x
 
       - name: Set Python version
         uses: actions/setup-python@v1
