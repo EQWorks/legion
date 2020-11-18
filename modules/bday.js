@@ -7,6 +7,7 @@ const {
   removeButton,
   signMessage,
   customMessage,
+  dates,
   sendText,
   sendBlocks,
   sendConfirmation,
@@ -89,7 +90,7 @@ const worker = async ({
             'type': 'plain_text',
             'text': 'Bday details'
           },
-          'blocks': [..._blocks(state.ref), button],
+          'blocks': [..._blocks(state.ref), dates(state.ref), button],
           'close': {
             'type': 'plain_text',
             'text': 'Nevermind'
@@ -108,13 +109,13 @@ const worker = async ({
       const _buttons = blocks.pop()
 
       if (action.action_id === 'add') {
-        if (blocks.length === 3) {
+        if (blocks.length === 4) {
           _buttons.elements.push(removeButton)
         }
-        updatedBlocks = [...blocks, ..._blocks(ref + 1), _buttons]
+        updatedBlocks = [...blocks, ..._blocks(ref + 1), dates(ref + 1), _buttons]
       } else {
-        blocks.splice(-3)
-        if (blocks.length === 3) {
+        blocks.splice(-4)
+        if (blocks.length === 4) {
           updatedBlocks = [...blocks, button]
         } else {
           updatedBlocks = [...blocks, _buttons]
@@ -157,6 +158,7 @@ const worker = async ({
       }
 
       const bdayData = Object.values(data)
+
       const { text, blocks, confirmation } = signMessage(bdayData, sender)
 
       // return web.conversations.open({ users: members.toString() })

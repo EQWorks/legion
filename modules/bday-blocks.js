@@ -56,6 +56,23 @@ module.exports.customMessage = (ref) => ({
   }
 })
 
+module.exports.dates = (ref) => ({
+  'type': 'input',
+  'block_id': `date_${ref}`,
+  'label': {
+    'type': 'plain_text',
+    'text': 'Date'
+  },
+  'element': {
+    'type': 'plain_text_input',
+    'action_id': 'input',
+    'placeholder': {
+      'type': 'plain_text',
+      'text': 'add the birthday here'
+    }
+  }
+})
+
 module.exports.button = {
   'type': 'actions',
   'elements': [
@@ -89,8 +106,9 @@ module.exports.removeButton = {
   // 'block_id': 'remove',
 }
 
-module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
-  let name = fullName
+module.exports.signMessage = ([{ fullName, url, date }, ...rest], sender) => {
+  let names = fullName
+  let namesWithDates = `${fullName}'s (${date})`
 
   let getClick = (name, url, type = 'text') => {
     const message = `Click :point_right: <${url}|here> :point_left: to sign a card for ${name}!`
@@ -110,8 +128,9 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
   let allCards = `${url}`
 
   if (rest.length) {
-    for (let { fullName, url } of rest) {
-      name += ` & ${fullName}`
+    for (let { fullName, url, date } of rest) {
+      names += ` & ${fullName}`
+      namesWithDates += ` & ${fullName}'s (${date})`
       clickSectionText.push(getClick(fullName, url))
       clickSectionBlock.push(getClick(fullName, url, 'block'))
       allCards += `, ${url}`
@@ -119,8 +138,8 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
   }
 
   const text = [
-    `:tada: Birthday Alert for ${name} :tada:`,
-    `*${name}'s* birthday is coming up soon! Take some time and leave a nice message for them to read. Thanks! :smile:`,
+    `:tada: Birthday Alert for ${names} :tada:`,
+    `*${namesWithDates}* birthday is coming up soon! Take some time and leave a nice message for ${names} to read. Thanks! :smile:`,
     ...clickSectionText,
     'Instructions are found inside the card.',
   ].join('\n')
@@ -130,7 +149,7 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
       'type': 'header',
       'text': {
         'type': 'plain_text',
-        'text': `:tada: Birthday Alert for ${name} :tada:`,
+        'text': `:tada: Birthday Alert for ${names} :tada:`,
         'emoji': true
       }
     },
@@ -138,7 +157,7 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
       'type': 'section',
       'text': {
         'type': 'mrkdwn',
-        'text': `*${name}*'s birthday is coming up soon! Take some time and leave a nice message for them to read. Instructions are found inside the card. Thanks! :smile:`
+        'text': `*${namesWithDates}* birthday is coming up soon! Take some time and leave a nice message for ${names} to read. Instructions are found inside the card. Thanks! :smile:`
       }
     },
     ...clickSectionBlock,
@@ -153,12 +172,13 @@ module.exports.signMessage = ([{ fullName, url }, ...rest], sender) => {
     }
   ]
 
+  const isMultipleCards = (rest.length) ? 'cards have' : 'card has'
   const confirmation = [
     {
       'type': 'header',
       'text': {
         'type': 'plain_text',
-        'text': `The card has been sent to everyone except ${name} to be signed! :tada:`,
+        'text': `The ${isMultipleCards} been sent to everyone except ${names} to be signed! :tada:`,
         'emoji': true
       }
     },
