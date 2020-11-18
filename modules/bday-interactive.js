@@ -27,6 +27,9 @@ module.exports.bdayInteractive = ({ type, values }) => {
           validData(key, input.value)
           acc[user_index] = { ...acc[user_index], url: input.value }
         }
+        if (key.includes('date')) {
+          acc[user_index] = { ...acc[user_index], date: input.value }
+        }
         if (key.includes('message')) {
           acc[user_index] = { ...acc[user_index], message: input.value }
         }
