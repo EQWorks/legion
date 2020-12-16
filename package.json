@@ -4,7 +4,7 @@
   "description": "EQ Slack command proxy",
   "main": "server.js",
   "scripts": {
-    "start": "env $(print-env) nodemon app.js",
+    "start": "env $(print-env) DEPLOYED= nodemon app.js",
     "deploy": "env $(print-env) sls deploy",
     "lint": "eslint --ext .js .",
     "test": "echo 'No test yet'",
