@@ -3,7 +3,7 @@ const NetlifyAPI = require('netlify')
 
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 50 - 3, NETLIFY_TOKEN, DEPLOYED = false } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 50 - 2, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
 
 // TODO: only supports 2-stage comparison for now
@@ -42,16 +42,18 @@ const CLIENTS = {
   },
 }
 
+const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
+
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   if (base === head) {
     return {
-      response_type: 'in_channel',
+      response_type: 'ephemeral',
       blocks: [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${product}* \`${dev}\` and \`${prod}\` are on the same commit (\`${base}\`)`,
+            text: `*${product}* \`${dev}\` and \`${prod}\` are on the same commit (\`${base.slice(0, 7)}\`)`,
           }
         },
       ],
@@ -69,15 +71,24 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     }
   )
 
+  const contributors = new Set([])
+  const breaking = new Set([])
   const noMerges = commits.filter(({ parents }) => parents.length <= 1).map(({
     sha,
     html_url,
     commit: { message, author, committer },
   }) => {
     const { name = '`Unknown`' } = (author || committer || {})
+    contributors.add(name) // add to contributors set
+    // highlight commits that may indicate breaking changes
+    let msg = message
+    if (mayBreak(message)) {
+      msg = `*${message}*`
+      breaking.add(sha)
+    }
     return {
       type: 'section',
-      text: { type: 'mrkdwn', text: `${message} (<${html_url}|${sha.slice(0, 7)}> by ${name})` },
+      text: { type: 'mrkdwn', text: `${msg} (<${html_url}|${sha.slice(0, 7)}> by ${name})` },
     }
   })
   noMerges.reverse()
@@ -94,21 +105,22 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
               text: `*${product}* \`${dev}\` is ${status} by ${limited.length} commits compared to \`${prod}\``,
             },
           },
-          {
-            type: 'context',
-            elements: [
-              {
-                type: 'plain_text',
-                text: `$ git log --pretty=oneline --no-merges ${base}...${head}`,
-              },
-            ],
-          },
           { type: 'divider' },
           ...limited,
         ],
       },
     ],
   }
+  // highlight contributors
+  if (contributors.size > 1) {
+    r.attachments[0].blocks[0].text.text += `\n\nContributors: ${Array.from(contributors).join(', ')}`
+  }
+  // indicate potential breaking changes
+  if (breaking.size) {
+    r.attachments[0].color = '#FF0000'
+    r.attachments[0].blocks[0].text.text += `\n\n*May contain ${breaking.size} breaking changes!*`
+  }
+  // add extra info to indicate that there are more commits than COMMIT_LIMIT
   if (limited.length < noMerges.length) {
     r.attachments[0].blocks[0].text.text += `\n\n${limited.length}/${noMerges.length} most recent commits shown below`
     r.attachments[0].blocks[0].accessory = {
