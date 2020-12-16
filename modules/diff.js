@@ -3,7 +3,7 @@ const NetlifyAPI = require('netlify')
 
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 10, NETLIFY_TOKEN, DEPLOYED = false } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 50 - 3, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
 
 // TODO: only supports 2-stage comparison for now
@@ -43,16 +43,6 @@ const CLIENTS = {
 }
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
-  const cxtBlk = {
-    type: 'context',
-    elements: [
-      {
-        type: 'plain_text',
-        text: `$ git log --pretty=oneline ${base}...${head}`,
-      }
-    ]
-  }
-
   if (base === head) {
     return {
       response_type: 'in_channel',
@@ -64,13 +54,11 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
             text: `*${product}* \`${dev}\` and \`${prod}\` are on the same commit (\`${base}\`)`,
           }
         },
-        { type: 'divider' },
-        cxtBlk,
       ],
     }
   }
 
-  const { data: { commits, total_commits, status, html_url } } = await axios.get(
+  const { data: { commits, status, html_url } } = await axios.get(
     `/repos/EQWorks/${product}/compare/${base}...${head}`,
     {
       baseURL: 'https://api.github.com',
@@ -80,54 +68,57 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
       },
     }
   )
-  const info = commits.filter(({ parents }) => parents.length <= 1).map(({
+
+  const noMerges = commits.filter(({ parents }) => parents.length <= 1).map(({
     sha,
     html_url,
     commit: { message, author, committer },
   }) => {
-    const { name = '`Unknown Hacker`', date = '`Unknown Time`' } = (author || committer || {})
-    return [
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: message },
-        accessory: {
-          type: 'button',
-          text: { type: 'plain_text', text: sha.slice(0, 7) },
-          url: html_url,
-          value: sha,
-        },
-      },
-      { type: 'context', elements: [{ type: 'mrkdwn', text: `${name} - ${date}` }] },
-    ]
+    const { name = '`Unknown`' } = (author || committer || {})
+    return {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `${message} (<${html_url}|${sha.slice(0, 7)}> by ${name})` },
+    }
   })
-  info.reverse()
-
-  return {
+  noMerges.reverse()
+  const limited = noMerges.length > (COMMIT_LIMIT) ? noMerges.slice(0, (COMMIT_LIMIT)) : noMerges
+  const r = {
     response_type: 'in_channel',
-    blocks: [
+    attachments: [
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `
-            *${product}* \`${dev}\` is ${status} by ${total_commits} commits compared to \`${prod}\`
-            ${info.length > COMMIT_LIMIT ? `\n${COMMIT_LIMIT}/${info.length} most recent commits shown below` : ''}
-          `.trim(),
-        },
-        accessory: {
-          type: 'button',
-          text: { type: 'plain_text', text: 'All Changes' },
-          url: html_url,
-          value: `${base}...${head}`,
-        },
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*${product}* \`${dev}\` is ${status} by ${limited.length} commits compared to \`${prod}\``,
+            },
+          },
+          {
+            type: 'context',
+            elements: [
+              {
+                type: 'plain_text',
+                text: `$ git log --pretty=oneline --no-merges ${base}...${head}`,
+              },
+            ],
+          },
+          { type: 'divider' },
+          ...limited,
+        ],
       },
-      { type: 'divider' },
-      // TODO: Array.prototype.flat not avail in Node until v11+
-      ...[].concat.apply([], info.length > COMMIT_LIMIT ? info.slice(0, COMMIT_LIMIT) : info),
-      { type: 'divider' },
-      cxtBlk,
     ],
   }
+  if (limited.length < noMerges.length) {
+    r.attachments[0].blocks[0].text.text += `\n\n${limited.length}/${noMerges.length} most recent commits shown below`
+    r.attachments[0].blocks[0].accessory = {
+      type: 'button',
+      text: { type: 'plain_text', text: 'All Changes' },
+      url: html_url,
+      value: `${base}...${head}`,
+    }
+  }
+  return r
 }
 
 const getServiceMeta = async (product) => {
