@@ -1,5 +1,6 @@
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
+const { gCalendarGetEvents} = require('../google-api/googleapis')
 
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
@@ -93,6 +94,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   })
   noMerges.reverse()
   const limited = noMerges.length > (COMMIT_LIMIT) ? noMerges.slice(0, (COMMIT_LIMIT)) : noMerges
+  const demos = await gCalendarGetEvents()
   const r = {
     response_type: 'in_channel',
     attachments: [
@@ -114,6 +116,15 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   // highlight contributors
   if (contributors.size > 1) {
     r.attachments[0].blocks[0].text.text += `\n\nContributors: ${Array.from(contributors).join(', ')}`
+  }
+
+  // link to demos calendar
+  if (demos) {
+    const {day, link, events } = demos
+    r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
+    events.forEach(({ timeSloth }) => {
+      r.attachments[0].blocks[0].text.text += `\n\t• ${timeSloth}`
+    })
   }
   // indicate potential breaking changes
   if (breaking.size) {
