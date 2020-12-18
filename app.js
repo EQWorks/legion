@@ -99,7 +99,14 @@ app.use('/interactive', (req, res) => {
     user: { id: sender },
     // much more avb inside, check documentation
   } = parsed
-
+  if (callback_id === 'demo') {
+    // needed for modal submission
+    res.status(200).json({ 'response_action': 'clear' })
+    return axios.post(private_metadata, {
+      response_type: 'ephemeral',
+      text: 'Event added to the Demo calendar'
+    })
+  }
   if (callback_id === 'bday') {
     // manipulate data received from submission
     const { data = {}, errors = {} } = bdayInteractive({ type, values })
