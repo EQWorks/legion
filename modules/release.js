@@ -53,7 +53,7 @@ const formatRepoStage = ({ repo, stage }) => isVersioned(repo) ? repo : `${repo}
 
 const worker = async ({ repo, stage = 'dev', response_url }) => {
   const r = {
-    response_type: 'ephemeral',
+    response_type: 'in_channel',
     text: `${formatRepoStage({ repo, stage })} cannot be released`,
   }
   const tag_name = await getNextVersion({ repo, stage })
