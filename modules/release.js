@@ -53,7 +53,7 @@ const formatRepoStage = ({ repo, stage }) => isVersioned(repo) ? repo : `${repo}
 
 const worker = async ({ repo, stage = 'dev', response_url }) => {
   const r = {
-    response_type: 'in_channel',
+    response_type: 'ephemeral',
     text: `${formatRepoStage({ repo, stage })} cannot be released`,
   }
   const tag_name = await getNextVersion({ repo, stage })
@@ -71,6 +71,7 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
     })
     if (data.html_url) {
       r.text = `<${data.html_url}|${repoTag} released>`
+      r.response_type = 'in_channel'
     }
   } catch (err) {
     console.error(err)
@@ -84,10 +85,9 @@ const route = (req, res) => {
   const [repo, stage] = text.trim().split(/\s+/) // parse out repo[, stage or semver-severity]
   const groups = GROUPS[repo.toLowerCase()] // slack usergroups allowed to release
   const repoStage = formatRepoStage({ repo, stage })
-  const response_type = 'ephemeral'
   return userInGroup({ user_id, groups }).then((can) => {
     if (!can) {
-      return res.status(200).json({ response_type, text: `You cannot release ${repoStage}` })
+      return res.status(200).json({ response_type: 'ephemeral', text: `You cannot release ${repoStage}` })
     }
     const payload = { repo, stage, response_url }
     if (!DEPLOYED) {
@@ -95,9 +95,12 @@ const route = (req, res) => {
       return
     }
     return invokeSlackWorker({ type: 'release', payload })
-  }).then(() => res.status(200).json({ response_type, text: `Releasing ${repoStage}...` })).catch((err) => {
+  }).then(() => res.status(200).json({
+    response_type: 'in_channel',
+    text: `<@${user_id}> is releasing ${repoStage}...`,
+  })).catch((err) => {
     console.error(err)
-    return res.status(200).json({ response_type, text: `Fail to release ${repoStage}:\n${errMsg(err)}` })
+    return res.status(200).json({ response_type: 'ephemeral', text: `Fail to release ${repoStage}:\n${errMsg(err)}` })
   })
 }
 
