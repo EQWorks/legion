@@ -1,5 +1,3 @@
-// const axios = require('axios')
-// const { } = require('../google-api/googleapis')
 const {  invokeSlackWorker, errMsg } = require('./util')
 const { WebClient } = require('@slack/web-api')
 
@@ -23,6 +21,7 @@ const view = {
   'blocks': [
     {
       'type': 'input',
+      'block_id': 'date',
       'element': {
         'type': 'datepicker',
         'placeholder': {
@@ -40,6 +39,7 @@ const view = {
     },
     {
       'type': 'input',
+      'block_id': 'startTime',
       'element': {
         'type': 'timepicker',
         'initial_time': '09:30',
@@ -58,6 +58,7 @@ const view = {
     },
     {
       'type': 'input',
+      'block_id': 'endTime',
       'element': {
         'type': 'timepicker',
         'placeholder': {
@@ -79,7 +80,7 @@ const view = {
 const worker = async ({ response_url, trigger_id }) => {
   return web.views.open({
     trigger_id,
-    view: {...view, private_metadata: response_url},
+    view: { ...view, private_metadata: response_url },
   })
 }
 

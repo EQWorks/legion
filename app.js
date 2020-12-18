@@ -3,10 +3,11 @@ const serverless = require('serverless-http')
 const bodyParser = require('body-parser')
 const axios = require('axios')
 
+const { lambda, getFuncName } = require('./modules/util')
 const modules = require('./modules')
 const { verifySlack } = require('./modules/middleware')
 const { bdayInteractive } = require('./modules/bday-interactive')
-const { lambda, getFuncName } = require('./modules/util')
+const { gCalendarCreateEvent } = require('./google-api/googleapis')
 
 const { DEPLOYED } = process.env
 const app = express()
@@ -102,11 +103,39 @@ app.use('/interactive', (req, res) => {
   if (callback_id === 'demo') {
     // needed for modal submission
     res.status(200).json({ 'response_action': 'clear' })
-    return axios.post(private_metadata, {
-      response_type: 'ephemeral',
-      text: 'Event added to the Demo calendar'
+
+    const {
+      date: { datepicker: { selected_date: date } },
+      startTime: { 'timepicker-start': { selected_time: start } },
+      endTime: { 'timepicker-end': { selected_time: end } }
+    } = values
+
+    const text = { type: 'mrkdwn' }
+    const blocks = [
+      {
+        type: 'section',
+        text,
+      },
+    ]
+    return gCalendarCreateEvent({ date, start, end }).then(([link]) => {
+      text.text = `:money_mouth_face: Event added to the <${link}|Demo calendar>`
+      return axios.post(private_metadata, {
+        response_type: 'ephemeral',
+        blocks,
+      })
+    }).catch((err) => {
+      console.error(err)
+      text.text = ':no_entry_sign: *COULD NOT* save this event.'
+      if (err.errors.length) {
+        text.text += `  Error: ${err.errors[0].message}`
+      }
+      return axios.post(private_metadata, {
+        response_type: 'ephemeral',
+        blocks,
+      })
     })
   }
+
   if (callback_id === 'bday') {
     // manipulate data received from submission
     const { data = {}, errors = {} } = bdayInteractive({ type, values })
