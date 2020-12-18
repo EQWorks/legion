@@ -1,6 +1,6 @@
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
-const { gCalendarGetEvents} = require('../google-api/googleapis')
+const { gCalendarGetEvents } = require('../google-api/googleapis')
 
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
@@ -120,7 +120,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
 
   // link to demos calendar
   if (demos) {
-    const {day, link, events } = demos
+    const { day, link, events } = demos
     r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
     events.forEach(({ timeSloth }) => {
       r.attachments[0].blocks[0].text.text += `\n\t• ${timeSloth}`

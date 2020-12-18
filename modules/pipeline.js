@@ -53,4 +53,4 @@ const route = ({ body: { response_url } }, res) => {
   }
 }
 
-module.exports = { worker, route}
+module.exports = { worker, route }

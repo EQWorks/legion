@@ -45,7 +45,7 @@ const worker = async ({ command, search, user_id, response_url, channel_name, ch
     // thread messages normally use thread_ts
     // search.messages does not return this, so make an extra call to check
     let threads = await Promise.all(result.messages.matches.map(async ({ text, permalink, ts }) => {
-      const thread = await web.conversations.replies({ channel: channel_id, ts})
+      const thread = await web.conversations.replies({ channel: channel_id, ts })
       if (thread.messages.length > 1) {
         // search each message for highlight tags and return text
         const highlights = THREAD_HIGHLIGHTS.map(({ tag, text }) => ({

@@ -37,5 +37,6 @@ module.exports = {
       "error",
       { "ignoreRestSiblings": true },
     ],
+    'object-curly-spacing': ['error', 'always'],
   },
 }

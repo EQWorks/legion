@@ -1,6 +1,6 @@
 const { google } = require('googleapis')
 
-const {GOOGLE_CLIENT_ID, GOOGLE_SECRET_KEY, GOOGLE_DEMO_CALENDAR, GOOGLE_REFRESH_TOKEN} = process.env
+const { GOOGLE_CLIENT_ID, GOOGLE_SECRET_KEY, GOOGLE_DEMO_CALENDAR, GOOGLE_REFRESH_TOKEN } = process.env
 
 
 /*
