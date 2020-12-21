@@ -122,8 +122,8 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   if (demos) {
     const { day, link, events } = demos
     r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
-    events.forEach(({ timeSloth }) => {
-      r.attachments[0].blocks[0].text.text += `\n\t• ${timeSloth}`
+    events.forEach(({ timeSlot }) => {
+      r.attachments[0].blocks[0].text.text += `\n\t• ${timeSlot}`
     })
   }
   // indicate potential breaking changes

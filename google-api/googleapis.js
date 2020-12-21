@@ -14,6 +14,65 @@ const oauth2Client = new google.auth.OAuth2(
 
 oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN })
 
+const isOverlap = (dateToCheck, start, end) => {
+  const ts = (dateString) => new Date(dateString).getTime()
+
+  const rangeCompare = ts(dateToCheck) >= ts(start) && ts(dateToCheck) <= ts(end)
+
+  return rangeCompare
+}
+
+const dedupeTime = (items) => {
+  const deduped = items.reduce((
+    acc,
+    {
+      summary,
+      start: { dateTime: startDate },
+      end: { dateTime: endDate },
+      htmlLink
+    },
+    i) => {
+    const eventKey = `event${i}`
+    const  existingEvents = Object.entries(acc || {})
+    let replaced = false
+    if (existingEvents.length) {
+      existingEvents.forEach(([key, { start, end }]) => {
+        const s = isOverlap(startDate, start, end)
+        const e = isOverlap(endDate, start, end)
+        if (!s && !e) {
+          replaced = false
+          return
+        }
+        if (s && !e){
+          acc[key].end = endDate
+        }
+        if (!s && e) {
+          acc[key].start = startDate
+        }
+        replaced = true
+      })
+    }
+    if (!replaced){
+      acc[eventKey] = {
+        start: startDate,
+        end: endDate,
+        summary,
+        htmlLink
+      }
+    }
+    return acc
+  }, {})
+  return Object.values(deduped).map((range) => {
+    range.timeSlot = [
+      'between',
+      new Date(range.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' }),
+      'and',
+      new Date(range.end).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })
+    ].join(' ')
+    return range
+  })
+}
+
 /**
  * @function gCalendarGetEvents
  * @param {object} param range dates to fetch events
@@ -32,7 +91,6 @@ module.exports.gCalendarGetEvents = ({
   // calendar public link
   const link = 'https://calendar.google.com/calendar/u/0?cid=Y18wZGdoZ3MyNWo3cWplNmFhZmw0NDhybXQxY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t'
 
-  // const { data: { items } } = calendar.events.list({
   return calendar.events.list({
     calendarId: GOOGLE_DEMO_CALENDAR,
     // calendarId: 'primary', // to test with your own calendar
@@ -42,22 +100,7 @@ module.exports.gCalendarGetEvents = ({
     orderBy: 'startTime',
   })
     .then(({ data: { items } }) => {
-      const events = items.map(({
-        summary,
-        start: { dateTime: startDate },
-        end: { dateTime: endDate },
-        htmlLink,
-      }) => ({
-        summary,
-        timeSloth: [
-          'between',
-          new Date(startDate).toLocaleTimeString(),
-          'and',
-          new Date(endDate).toLocaleTimeString()
-        ].join(' '),
-        htmlLink,
-      }))
-
+      const events = dedupeTime(items)
       return events.length
         ? { day: new Date(start).toDateString(), link, events }
         : null
