@@ -16,6 +16,7 @@
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
+    "googleapis": "^66.0.0",
     "lodash.samplesize": "^4.2.0",
     "netlify": "^2.4.6",
     "serverless-http": "^2.0.2",
