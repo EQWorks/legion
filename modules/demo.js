@@ -97,7 +97,7 @@ const route = (req, res) => {
     if (!DEPLOYED) {
       worker(payload).catch(console.error)
     } else {
-      invokeSlackWorker({ type: 'diff', payload })
+      invokeSlackWorker({ type: 'demo', payload })
     }
 
     res.status(200).json({
