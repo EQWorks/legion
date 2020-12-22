@@ -1,7 +1,11 @@
 const { google } = require('googleapis')
 
-const { GOOGLE_CLIENT_ID, GOOGLE_SECRET_KEY, GOOGLE_DEMO_CALENDAR, GOOGLE_REFRESH_TOKEN } = process.env
-
+const {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_SECRET_KEY,
+  GOOGLE_DEMO_CALENDAR,
+  GOOGLE_REFRESH_TOKEN,
+} = process.env
 
 /*
   https://developers.google.com/calendar/quickstart/nodejs
@@ -13,6 +17,17 @@ const oauth2Client = new google.auth.OAuth2(
 )
 
 oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN })
+
+
+const calendar = google.calendar({
+  version: 'v3',
+  auth: oauth2Client
+})
+
+/**  calendar public link */
+const link = 'https://calendar.google.com/calendar/u/0?cid=Y18wZGdoZ3MyNWo3cWplNmFhZmw0NDhybXQxY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t'
+
+const calendarId = GOOGLE_DEMO_CALENDAR
 
 const isOverlap = (dateToCheck, start, end) => {
   const ts = (dateString) => new Date(dateString).getTime()
@@ -84,17 +99,10 @@ module.exports.gCalendarGetEvents = ({
   start = (new Date()).setHours(0,0,0,0),
   end = (new Date()).setHours(23,59,59,999),
 } = {}) => {
-  const calendar = google.calendar({
-    version: 'v3',
-    auth: oauth2Client
-  })
-  // calendar public link
-  const link = 'https://calendar.google.com/calendar/u/0?cid=Y18wZGdoZ3MyNWo3cWplNmFhZmw0NDhybXQxY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t'
-
   return calendar.events.list({
-    calendarId: GOOGLE_DEMO_CALENDAR,
+    calendarId,
     // calendarId: 'primary', // to test with your own calendar
-    timeMin: new Date(start).toISOString(), //utc
+    timeMin: new Date(start).toISOString(),
     timeMax: new Date(end).toISOString(),
     singleEvents: true,
     orderBy: 'startTime',
@@ -155,4 +163,36 @@ module.exports.gCalendarGetEvents = ({
         reminders: { useDefault: true }
       }, ... ]
    */
+}
+
+/**
+ * @function gCalendarCreateEvent
+ * @param {object} param range dates to fetch events
+ * @param {string} param.date start date yyyy-mm-dd '2020-12-21'
+ * @param {string} param.start start time string hh:mm '13:30'
+ * @param {string} param.end end time string hh:mm '14:00'
+ */
+module.exports.gCalendarCreateEvent = ({ date, start: _start, end: _end }) => {
+  const start = new Date(`${date} ${_start}`).toISOString()
+  const end = new Date(`${date} ${_end}`).toISOString()
+
+  const event = {
+    summary: 'Demo',
+    start: {
+      /** 'dateTime': '2020-12-18T09:00:00'*/
+      'dateTime': start,
+      'timeZone': 'America/Toronto'
+    },
+    end: {
+      /** 'dateTime': '2020-12-18T17:00:00'*/
+      'dateTime': end,
+      'timeZone': 'America/Toronto'
+    },
+  }
+  /** https://developers.google.com/calendar/v3/reference/events/insert#javascript */
+  return calendar.events.insert({
+    calendarId,
+    resource: event,
+  })
+    .then(({ status }) => [link, status])
 }

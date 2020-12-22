@@ -1,3 +1,4 @@
+const demo = require('./demo')
 const diff = require('./diff')
 const food = require('./food')
 const pipeline = require('./pipeline')
@@ -10,6 +11,7 @@ const release = require('./release')
 
 
 module.exports = {
+  demo,
   diff,
   food,
   pipeline,
