@@ -77,7 +77,7 @@ const view = {
   ]
 }
 
-const worker = async ({ response_url, trigger_id }) => {
+const worker = ({ response_url, trigger_id }) => {
   return web.views.open({
     trigger_id,
     view: { ...view, private_metadata: response_url },
@@ -91,23 +91,19 @@ const route = (req, res) => {
     trigger_id,
   } = req.body
   const payload = { trigger_id, response_url }
-
-  try {
-
-    if (!DEPLOYED) {
-      worker(payload).catch(console.error)
-    } else {
-      invokeSlackWorker({ type: 'demo', payload })
-    }
-
-    res.status(200).json({
-      response_type: 'ephemeral',
-      text: 'Add event details...',
-    })
-  } catch (err) {
+  let invoke
+  if (!DEPLOYED) {
+    invoke = worker(payload)
+  } else {
+    invoke = invokeSlackWorker({ type: 'demo', payload })
+  }
+  return invoke.then(() => res.status(200).json({
+    response_type: 'ephemeral',
+    text: 'Add event details...',
+  })).catch((err) => {
     console.error(err)
     return res.status(200).json({ response_type: 'ephemeral', text: `Failed to save this event:\n${errMsg(err)}` })
-  }
+  })
 }
 
 module.exports = { worker, route }
