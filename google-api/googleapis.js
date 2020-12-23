@@ -80,9 +80,9 @@ const dedupeTime = (items) => {
   return Object.values(deduped).map((range) => {
     range.timeSlot = [
       'between',
-      new Date(range.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' }),
+      new Date(range.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', timeZone: 'America/Toronto' }),
       'and',
-      new Date(range.end).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })
+      new Date(range.end).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', timeZone: 'America/Toronto' })
     ].join(' ')
     return range
   })
@@ -172,20 +172,18 @@ module.exports.gCalendarGetEvents = ({
  * @param {string} param.start start time string hh:mm '13:30'
  * @param {string} param.end end time string hh:mm '14:00'
  */
-module.exports.gCalendarCreateEvent = ({ date, start: _start, end: _end }) => {
-  const start = new Date(`${date} ${_start}`).toISOString()
-  const end = new Date(`${date} ${_end}`).toISOString()
+module.exports.gCalendarCreateEvent = ({ date, start, end }) => {
 
   const event = {
     summary: 'Demo',
     start: {
       /** 'dateTime': '2020-12-18T09:00:00'*/
-      'dateTime': start,
+      'dateTime': `${date}T${start}:00`,
       'timeZone': 'America/Toronto'
     },
     end: {
       /** 'dateTime': '2020-12-18T17:00:00'*/
-      'dateTime': end,
+      'dateTime': `${date}T${end}:00`,
       'timeZone': 'America/Toronto'
     },
   }
