@@ -80,9 +80,9 @@ const dedupeTime = (items) => {
   return Object.values(deduped).map((range) => {
     range.timeSlot = [
       'between',
-      new Date(range.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' }),
+      new Date(range.start).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', timeZone: 'America/Toronto' }),
       'and',
-      new Date(range.end).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })
+      new Date(range.end).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', timeZone: 'America/Toronto' })
     ].join(' ')
     return range
   })
