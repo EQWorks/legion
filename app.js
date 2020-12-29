@@ -101,6 +101,7 @@ app.use('/interactive', (req, res) => {
     // much more avb inside, check documentation
   } = parsed
   if (callback_id === 'demo') {
+    console.log('interactive endpoint')
     // needed for modal submission
     res.status(200).json({ 'response_action': 'clear' })
 
@@ -117,6 +118,7 @@ app.use('/interactive', (req, res) => {
         text,
       },
     ]
+    console.log('interactive: prior to google api call', private_metadata)
     return gCalendarCreateEvent({ date, start, end }).then(([link]) => {
       text.text = `:money_mouth_face: Event added to the <${link}|Demo calendar>`
       return axios.post(private_metadata, {

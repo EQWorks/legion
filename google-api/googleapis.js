@@ -173,6 +173,7 @@ module.exports.gCalendarGetEvents = ({
  * @param {string} param.end end time string hh:mm '14:00'
  */
 module.exports.gCalendarCreateEvent = ({ date, start: _start, end: _end }) => {
+  console.log('inside gCalendarCreateEvent', date, _start, _end)
   const start = new Date(`${date} ${_start}`).toISOString()
   const end = new Date(`${date} ${_end}`).toISOString()
 
