@@ -117,7 +117,10 @@ app.use('/interactive', (req, res) => {
         text,
       },
     ]
+    console.log('interactive: prior to google api call')
     return gCalendarCreateEvent({ date, start, end }).then(([link]) => {
+      console.log('gCalendarCreateEvent().then', link)
+      console.log('response_url', private_metadata)
       text.text = `:money_mouth_face: Event added to the <${link}|Demo calendar>`
       return axios.post(private_metadata, {
         response_type: 'ephemeral',
