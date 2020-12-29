@@ -101,9 +101,6 @@ app.use('/interactive', (req, res) => {
     // much more avb inside, check documentation
   } = parsed
   if (callback_id === 'demo') {
-    // needed for modal submission
-    res.status(200).json({ 'response_action': 'clear' })
-
     const {
       date: { datepicker: { selected_date: date } },
       startTime: { 'timepicker-start': { selected_time: start } },
@@ -117,7 +114,10 @@ app.use('/interactive', (req, res) => {
         text,
       },
     ]
+    console.log('interactive: prior to google api call', private_metadata)
     return gCalendarCreateEvent({ date, start, end }).then(([link]) => {
+      console.log('gCalendarCreateEvent().then', link)
+      console.log('response_url', private_metadata)
       text.text = `:money_mouth_face: Event added to the <${link}|Demo calendar>`
       return axios.post(private_metadata, {
         response_type: 'ephemeral',
@@ -133,7 +133,7 @@ app.use('/interactive', (req, res) => {
         response_type: 'ephemeral',
         blocks,
       })
-    })
+    }).finally(() => res.status(200).json({ 'response_action': 'clear' }))
   }
 
   if (callback_id === 'bday') {

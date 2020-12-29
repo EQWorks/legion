@@ -90,6 +90,7 @@ const route = (req, res) => {
     response_url,
     trigger_id,
   } = req.body
+  console.log('response_url, trigger_id', response_url, trigger_id)
   const payload = { trigger_id, response_url }
   let invoke
   if (!DEPLOYED) {
