@@ -101,9 +101,6 @@ app.use('/interactive', (req, res) => {
     // much more avb inside, check documentation
   } = parsed
   if (callback_id === 'demo') {
-    // needed for modal submission
-    res.status(200).json({ 'response_action': 'clear' })
-
     const {
       date: { datepicker: { selected_date: date } },
       startTime: { 'timepicker-start': { selected_time: start } },
@@ -133,7 +130,7 @@ app.use('/interactive', (req, res) => {
         response_type: 'ephemeral',
         blocks,
       })
-    })
+    }).finally(() => res.status(200).json({ 'response_action': 'clear' }))
   }
 
   if (callback_id === 'bday') {
