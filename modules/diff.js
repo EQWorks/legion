@@ -100,7 +100,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   Object.entries(parsed).forEach(([label, items]) => {
     formatted += `\n*${label}*\n`
     items.forEach((item) => {
-      formatted += `* ${item}\n`
+      formatted += `• ${item}\n`
     })
   })
   const hasBreaking = mayBreak(formatted)
