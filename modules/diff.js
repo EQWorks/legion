@@ -119,6 +119,13 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
           },
           { type: 'divider' },
           { type: 'section', text: { type: 'mrkdwn', text: formatted } },
+          {
+            type: 'context',
+            elements: [{
+              type: 'mrkdwn',
+              text: `(${product}) % npx @eqworks/release changelog --base ${base.slice(0, 7)} --head ${head.slice(0, 7)}`,
+            }],
+          },
         ],
       },
     ],
