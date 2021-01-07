@@ -3,9 +3,10 @@ const { WebClient } = require('@slack/web-api')
 const { lambda, getFuncName } = require('./util')
 
 
-const DEV_CHANNEL_ID = 'G1FDULP1R'
 const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
+const LEGION_USER_ID = 'U6HRD6C0G'
+
 
 const R = /(?<cat>\S+?)(\/(?<t2>\S+))?( - |: )(?<update>.*)/
 const parseSubject = (s) => {
@@ -55,7 +56,46 @@ const worker = async ({ channel, response_url, ts, text }) => {
     })
   }
 
-  if (channel !== DEV_CHANNEL_ID) {
+  let updates
+  try {
+    const { messages: thread } = await web.conversations.replies({ channel, ts })
+    // filter out any other message that could be conversation including parent note
+    updates = thread.filter(({ text }) => {
+      // get the first word of the block of text and check if it is an action
+      const match = text.match(/(?<action>[^/-]\S+)/)
+
+      // TODO: extract info when hugo is used to add updates as match is null, temp fix
+      if (match) {
+        const { action } = match.groups
+        return action.toLowerCase().match(/did|doing|issues|todo/)
+      }
+    })
+    /** updates = [
+   {
+    client_msg_id: '9e0d7786-423e-488b-8653-811f30c3dff9',
+    type: 'message',
+    text: 'Did - Locus:\n' +
+      '• FO/ML: new `/views` routes\n' +
+      '• FO/ML: expose content field\n' +
+      '• ML Writer: add validation for json fields\n' +
+      '• Atom/Onlia: split auto &amp; home conversions\n' +
+      '• Sales/Bell: translate deck into French\n' +
+      '• HH: calculate coverage metrics\n' +
+      'Doing:\n' +
+      '• ML: look into caching query results',
+    user: 'UU489FGKH',
+    ts: '1603810241.117100',
+    team: 'T1FDR4NG3',
+    blocks: [ [Object] ],
+    thread_ts: '1603807314.106800'
+  },
+  ...]
+  */
+  } catch(err) {
+    let text = err.message
+    if (text.includes('channel_not_found')) {
+      text = `<@${LEGION_USER_ID}> could not find channel. Make sure that <@${LEGION_USER_ID}> is invited to this channel`
+    }
     return axios.post(response_url, {
       response_type: 'ephemeral',
       blocks: [
@@ -64,41 +104,12 @@ const worker = async ({ channel, response_url, ts, text }) => {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: ':x:  Please provide the correct meeting notes link, from the #dev channel',
+            text: `:x: ${text}`,
           },
         },
       ],
     })
   }
-
-  const { messages: thread } = await web.conversations.replies({ channel, ts })
-  // filter out any other message that could be conversation including parent note
-  const updates = thread.filter(({ text }) => {
-    // get the first word of the block of text and check if it is an action
-    const { action } = text.match(/(?<action>[^/-]\S+)/).groups
-    return action.toLowerCase().match(/did|doing|issues|todo/)
-  })
-  /** updates = [
- {
-  client_msg_id: '9e0d7786-423e-488b-8653-811f30c3dff9',
-  type: 'message',
-  text: 'Did - Locus:\n' +
-    '• FO/ML: new `/views` routes\n' +
-    '• FO/ML: expose content field\n' +
-    '• ML Writer: add validation for json fields\n' +
-    '• Atom/Onlia: split auto &amp; home conversions\n' +
-    '• Sales/Bell: translate deck into French\n' +
-    '• HH: calculate coverage metrics\n' +
-    'Doing:\n' +
-    '• ML: look into caching query results',
-  user: 'UU489FGKH',
-  ts: '1603810241.117100',
-  team: 'T1FDR4NG3',
-  blocks: [ [Object] ],
-  thread_ts: '1603807314.106800'
-},
-...]
- */
 
   const categorizedData = {}
   let project = ''
