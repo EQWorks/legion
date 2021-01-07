@@ -5,6 +5,8 @@ const { lambda, getFuncName } = require('./util')
 
 const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
+const LEGION_USER_ID = 'U6HRD6C0G'
+
 
 const R = /(?<cat>\S+?)(\/(?<t2>\S+))?( - |: )(?<update>.*)/
 const parseSubject = (s) => {
@@ -92,7 +94,7 @@ const worker = async ({ channel, response_url, ts, text }) => {
   } catch(err) {
     let text = err.message
     if (text.includes('channel_not_found')) {
-      text = 'legion could not find channel. Make sure that legion is invited to this channel'
+      text = `<@${LEGION_USER_ID}> could not find channel. Make sure that <@${LEGION_USER_ID}> is invited to this channel`
     }
     return axios.post(response_url, {
       response_type: 'ephemeral',
