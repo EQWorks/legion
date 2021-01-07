@@ -74,9 +74,14 @@ const worker = async ({ channel, response_url, ts, text }) => {
   const { messages: thread } = await web.conversations.replies({ channel, ts })
   // filter out any other message that could be conversation including parent note
   const updates = thread.filter(({ text }) => {
-    // get the first word of the block of text and check if it is an action
-    const { action } = text.match(/(?<action>[^/-]\S+)/).groups
-    return action.toLowerCase().match(/did|doing|issues|todo/)
+      // get the first word of the block of text and check if it is an action
+      const match = text.match(/(?<action>[^/-]\S+)/)
+
+      // TODO: extract info when hugo is used to add updates as match is null, temp fix
+      if (match) {
+        const { action } = match.groups
+        return action.toLowerCase().match(/did|doing|issues|todo/)
+      }
   })
   /** updates = [
  {
