@@ -4,6 +4,7 @@ const { lambda, getFuncName } = require('./util')
 
 
 const DEV_CHANNEL_ID = 'G1FDULP1R'
+const DATA_CHANNEL_ID = 'G8N74MDCH'
 const { SLACK_OAUTH, DEPLOYED } = process.env
 const web = new WebClient(SLACK_OAUTH)
 
@@ -55,7 +56,7 @@ const worker = async ({ channel, response_url, ts, text }) => {
     })
   }
 
-  if (channel !== DEV_CHANNEL_ID) {
+  if (channel !== DEV_CHANNEL_ID && channel !== DATA_CHANNEL_ID) {
     return axios.post(response_url, {
       response_type: 'ephemeral',
       blocks: [
@@ -74,14 +75,14 @@ const worker = async ({ channel, response_url, ts, text }) => {
   const { messages: thread } = await web.conversations.replies({ channel, ts })
   // filter out any other message that could be conversation including parent note
   const updates = thread.filter(({ text }) => {
-      // get the first word of the block of text and check if it is an action
-      const match = text.match(/(?<action>[^/-]\S+)/)
+    // get the first word of the block of text and check if it is an action
+    const match = text.match(/(?<action>[^/-]\S+)/)
 
-      // TODO: extract info when hugo is used to add updates as match is null, temp fix
-      if (match) {
-        const { action } = match.groups
-        return action.toLowerCase().match(/did|doing|issues|todo/)
-      }
+    // TODO: extract info when hugo is used to add updates as match is null, temp fix
+    if (match) {
+      const { action } = match.groups
+      return action.toLowerCase().match(/did|doing|issues|todo/)
+    }
   })
   /** updates = [
  {
