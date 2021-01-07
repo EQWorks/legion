@@ -5,7 +5,7 @@ const { parseCommits } = require('@eqworks/release')
 
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
-const { GITHUB_TOKEN, NETLIFY_TOKEN, DEPLOYED = false } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
 
 // TODO: only supports 2-stage comparison for now
@@ -99,9 +99,12 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   let formatted = `*Changelog: from ${base.slice(0, 7)} to ${head.slice(0, 7)}*\n`
   Object.entries(parsed).forEach(([label, items]) => {
     formatted += `\n*${label}*\n`
-    items.forEach((item) => {
+    items.slice(0, COMMIT_LIMIT).forEach((item) => {
       formatted += `• ${item}\n`
     })
+    if (items.length > COMMIT_LIMIT) {
+      formatted += `• ${items.length - COMMIT_LIMIT} more...\n`
+    }
   })
   const hasBreaking = mayBreak(formatted)
   const demos = await gCalendarGetEvents()
