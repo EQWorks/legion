@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@eqworks/avail-bot": "^1.0.7",
+    "@eqworks/release": "^3.1.0",
     "@slack/web-api": "^5.7.0",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
