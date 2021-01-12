@@ -45,6 +45,17 @@ module.exports.bdayInteractive = ({ type, values }) => {
         ...
       }
      */
+
+    for (let [index, { id }] of Object.entries(data)){
+      delete Object.assign(data, { [id]: data[index] })[index]
+    }
+    /**
+     * data {
+        U01B87YFQ78: { id: 'U01B87YFQ78', url: 'test'},
+        U01B87ZH3GW: { id: 'U01B87ZH3GW', url: 'test', message: 'bday wishes'  },
+        ...
+      }
+     */
     return { errors, data }
   }
   return data

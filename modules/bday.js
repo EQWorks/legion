@@ -151,23 +151,41 @@ const worker = async ({
       // send to every member in #general excluding bday person
       const { members } = await web.conversations.members({ channel: channel_id })
 
-      for (let [user_index, { id }] of Object.entries(data)) {
-        members.splice(members.findIndex((m) => m === id), 1)
+      const bdayPeople = Object.keys(data)
+      for (let id of bdayPeople) {
         const { user: { real_name } } = await web.users.info({ user: id })
-        data[user_index].fullName = real_name
+        data[id].fullName = real_name
       }
 
       const bdayData = Object.values(data)
 
       const { text, blocks, confirmation } = signMessage(bdayData, sender)
 
-      // return web.conversations.open({ users: members.toString() })
       return Promise.all(
-        members.map((channel) => web.chat.postMessage({
-          channel,
-          text,
-          blocks,
-        }))
+        members.map((id) => {
+          if (data.hasOwnProperty(id)){
+            /** skip bday person if single bday */
+            if (bdayPeople.length === 1) return
+            /** modify message in case of multiple bday */
+            const _data = { ...data }
+            delete _data[id]
+            const {
+              text: modifiedText,
+              blocks: modifiedBlock
+            } = signMessage(Object.values(_data), sender)
+
+            return web.chat.postMessage({
+              channel: id,
+              text: modifiedText,
+              blocks: modifiedBlock,
+            })
+          }
+          return web.chat.postMessage({
+            channel: id,
+            text,
+            blocks,
+          })
+        })
       ).then(() => {
         // notify user invitation has been sent
         return axios.post(response_url, {
@@ -260,9 +278,9 @@ const worker = async ({
 
     // upon modal submission
     if (type === 'view_submission') {
-      for (let [user_index, { id }] of Object.entries(data)) {
+      for (let id of Object.keys(data)) {
         const { user: { real_name } } = await web.users.info({ user: id })
-        data[user_index].fullName = real_name
+        data[id].fullName = real_name
       }
 
       const bdayData = Object.values(data)
