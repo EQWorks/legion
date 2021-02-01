@@ -14,6 +14,7 @@
     "@eqworks/avail-bot": "^1.0.7",
     "@eqworks/release": "^3.1.0",
     "@slack/web-api": "^5.7.0",
+    "asana": "^0.18.5",
     "axios": "^0.18.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
@@ -24,7 +25,7 @@
     "tsscmp": "^1.0.6"
   },
   "engines": {
-    "node": "12.x"
+    "node": "14.x"
   },
   "repository": {
     "url": "https://glitch.com/edit/#!/welcome-project"
