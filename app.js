@@ -25,9 +25,9 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
-if (process.env.DEPLOYED) {
-  app.use(verifySlack)
-}
+// if (process.env.DEPLOYED) {
+//   app.use(verifySlack)
+// }
 
 // secondary prefix for backward compat
 Object.entries(modules).forEach(([uri, { route }]) => {
@@ -186,6 +186,19 @@ app.use('/interactive', (req, res) => {
       // modal interactions need to have acknowledgement
       return res.sendStatus(200)
     }
+  }
+
+  // asana authorization modal
+  if (callback_id === 'asana-authorizer') {
+    const payload = { type, values }
+    const { worker } = modules['journal']
+
+    worker(payload).catch(console.error)
+
+    if (type === 'view_submission') {
+      return res.status(200).json({ 'response_action': 'clear' })
+    }
+    return res.sendStatus(200)
   }
 })
 
