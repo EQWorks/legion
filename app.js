@@ -34,7 +34,6 @@ Object.entries(modules).forEach(([uri, { route }]) => {
   app.use(`/${uri}`, route)
 })
 
-// https://o1u4dgxs7a.execute-api.us-east-1.amazonaws.com/dev/interactive
 /*
 ---- BLOCK ACTION REFERENCE ----
 https://api.slack.com/apps/A6HPM5VC0/interactive-messages
@@ -219,5 +218,10 @@ if (require.main === module) {
     console.log(`Listening on port ${PORT}`)
   })
 } else {
-  module.exports.handler = serverless(app)
+  const Sentry = require('@sentry/serverless')
+  Sentry.AWSLambda.init({
+    dsn: 'https://9449c478de4e4036b9ee4f296cb15106@o136261.ingest.sentry.io/5851599',
+    tracesSampleRate: 1.0,
+  })
+  module.exports.handler = Sentry.AWSLambda.wrapHandler(serverless(app))
 }
