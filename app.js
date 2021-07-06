@@ -1,6 +1,5 @@
 const express = require('express')
 const serverless = require('serverless-http')
-const bodyParser = require('body-parser')
 const axios = require('axios')
 
 const { lambda, getFuncName } = require('./modules/util')
@@ -18,8 +17,8 @@ const rawBodyBuffer = (req, _, buf, encoding) => {
   }
 }
 
-app.use(bodyParser.urlencoded({ verify: rawBodyBuffer, extended: true }))
-app.use(bodyParser.json({ verify: rawBodyBuffer }))
+app.use(express.urlencoded({ verify: rawBodyBuffer, extended: true }))
+app.use(express.json({ verify: rawBodyBuffer }))
 
 app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
