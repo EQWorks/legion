@@ -5,6 +5,7 @@ const { SLACK_OAUTH, STAGE = 'dev' } = process.env
 
 const web = new WebClient(SLACK_OAUTH)
 
+// to get group id, can run this.listUserGroups() with await or promises and look at 'id' key
 const SLACK_GROUP_IDS = {
   'snoketeam': 'SA4K92V8F',
   'firstorderteam': 'SA3HUB0QJ',
