@@ -195,8 +195,10 @@ const worker = async ({ product, response_url }) => {
 }
 
 const route = (req, res) => {
-  const { user_id, text: _product, response_url } = req.body // extract payload from slash command
-  const product = _product || 'firstorder'
+  const { user_id, text: _product, response_url, channel_name } = req.body // extract payload from slash command
+  const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
+  const cn = channel_name.toLowerCase()
+  const product = _product || (products.includes(cn) ? cn : 'firstorder')
   const payload = { product, response_url }
   const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
 
