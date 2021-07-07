@@ -3,7 +3,7 @@ const NetlifyAPI = require('netlify')
 const { gCalendarGetEvents } = require('../google-api/googleapis')
 const { parseCommits } = require('@eqworks/release')
 
-const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
+const { userInGroup, invokeSlackWorker, errMsg, getSpecificGroupIds } = require('./util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
@@ -14,19 +14,19 @@ const SERVICES = {
     baseURL: 'httsp://api.eqworks.io',
     stages: ['dev', 'beta'],
     key: 'OVERSEER_VER',
-    groups: ['flashteam', 'overlordteam', 'overseerteam'],
+    groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
   },
   firstorder: {
     baseURL: 'https://api.locus.place',
     stages: ['dev', 'prod'],
     key: 'API_VER',
-    groups: ['firstorderteam', 'snoketeam'],
+    groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
   keywarden: {
     baseURL: 'https://auth.eqworks.io',
     stages: ['dev', 'prod'],
     key: 'KEYWARDEN_VER',
-    groups: ['flashteam', 'overlordteam', 'overseerteam', 'firstorderteam', 'snoketeam'],
+    groups: getSpecificGroupIds(['firstorderteam', 'snoketeam', 'flashteam', 'overseerteam', 'overlordteam'])
   },
 }
 const CLIENTS = {
@@ -34,13 +34,13 @@ const CLIENTS = {
     siteId: 'overlord.eqworks.io',
     stages: ['master', 'prod'],
     head: 'master',
-    groups: ['flashteam', 'overlordteam', 'overseerteam'],
+    groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
   },
   snoke: {
     siteId: 'console.locus.place',
     stages: ['dev', 'prod'],
     head: 'master',
-    groups: ['firstorderteam', 'snoketeam'],
+    groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
 }
 
@@ -194,7 +194,7 @@ const worker = async ({ product, response_url }) => {
   return axios.post(response_url, { replace_original: true, ...r })
 }
 
-const route = (req, res) => {
+const route = async (req, res) => {
   const { user_id, text: _product, response_url, channel_name } = req.body // extract payload from slash command
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
   const cn = channel_name.toLowerCase()
@@ -202,22 +202,27 @@ const route = (req, res) => {
   const payload = { product, response_url }
   const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
 
-  return userInGroup({ user_id, groups }).then((can) => {
-    if (!can) {
+  try {
+    const isUserInGroup = await userInGroup({ user_id, groups })
+
+    if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
+
     if (!DEPLOYED) {
       worker(payload).catch(console.error)
-      return
+    } else {
+      invokeSlackWorker({ type: 'diff', payload })
     }
-    return invokeSlackWorker({ type: 'diff', payload })
-  }).then(() => res.status(200).json({
-    response_type: 'ephemeral',
-    text: `Diffing for ${product}...`,
-  })).catch((err) => {
+
+    return res.status(200).json({
+      response_type: 'ephemeral',
+      text: `Diffing for ${product}...`,
+    })
+  } catch(err) {
     console.error(err)
     return res.status(200).json({ response_type: 'ephemeral', text: `Failed to diff:\n${errMsg(err)}` })
-  })
+  }
 }
 
 module.exports = { worker, route }
