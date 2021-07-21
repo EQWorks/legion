@@ -1,5 +1,6 @@
 const axios = require('axios')
 
+const { SERVICES, CLIENTS } = require('./products')
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
 
@@ -22,12 +23,6 @@ const VER_POS = {
   'minor': 1,
   'patch': 2,
   'dev': 2,
-}
-const GROUPS = {
-  snoke: ['firstorderteam', 'snoketeam'],
-  firstorder: ['firstorderteam', 'snoketeam'],
-  overlord: ['flashteam', 'overlordteam', 'overseerteam'],
-  overseer: ['flashteam', 'overlordteam', 'overseerteam'],
 }
 
 const isVersioned = (repo) => VERSIONED.includes(repo.toLowerCase())
@@ -80,28 +75,34 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
   return axios.post(response_url, { replace_original: true, ...r })
 }
 
-const route = (req, res) => {
+const route = async (req, res) => {
   const { user_id, text, response_url } = req.body // extract payload from slash command
   const [repo, stage] = text.trim().split(/\s+/) // parse out repo[, stage or semver-severity]
-  const groups = GROUPS[repo.toLowerCase()] // slack usergroups allowed to release
+  const { groups = [] } = SERVICES[repo] || CLIENTS[repo] || {} // slack usergroups allowed to release
   const repoStage = formatRepoStage({ repo, stage })
-  return userInGroup({ user_id, groups }).then((can) => {
-    if (!can) {
+
+  try {
+    const isUserInGroup = await userInGroup({ user_id, groups })
+
+    if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot release ${repoStage}` })
     }
+
     const payload = { repo, stage, response_url }
     if (!DEPLOYED) {
       worker(payload).catch(console.error)
-      return
+    } else {
+      invokeSlackWorker({ type: 'release', payload })
     }
-    return invokeSlackWorker({ type: 'release', payload })
-  }).then(() => res.status(200).json({
-    response_type: 'in_channel',
-    text: `<@${user_id}> is releasing ${repoStage}...`,
-  })).catch((err) => {
+
+    return res.status(200).json({
+      response_type: 'in_channel',
+      text: `<@${user_id}> is releasing ${repoStage}...`,
+    })
+  } catch(err) {
     console.error(err)
     return res.status(200).json({ response_type: 'ephemeral', text: `Fail to release ${repoStage}:\n${errMsg(err)}` })
-  })
+  }
 }
 
 module.exports = { worker, route }
