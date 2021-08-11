@@ -72,7 +72,6 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     }
   })
   const hasBreaking = mayBreak(formatted)
-  const demos = await gCalendarGetEvents()
   const r = {
     response_type: 'in_channel',
     attachments: [
@@ -103,6 +102,13 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     r.attachments[0].blocks[0].text.text += `\n\nContributors: ${Array.from(contributors).join(', ')}`
   }
   // link to demos calendar
+  let demos = null
+  try {
+    demos = await gCalendarGetEvents()
+  } catch (err) {
+    console.warn('Failed to obtain demo calendar events')
+    console.error(err)
+  }
   if (demos) {
     const { day, link, events } = demos
     r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
