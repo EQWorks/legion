@@ -72,7 +72,7 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
     console.error(err)
     r.text = `Fail to release ${repoTag}:\n${errMsg(err)}`
   }
-  return axios.post(response_url, { replace_original: true, ...r })
+  return axios.post(response_url, { replace_original: false, ...r })
 }
 
 const route = async (req, res) => {
