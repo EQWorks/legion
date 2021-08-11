@@ -159,7 +159,7 @@ const worker = async ({ product, response_url }) => {
   return axios.post(response_url, { replace_original: true, ...r })
 }
 
-const route = async (req, res) => {
+const route = (req, res) => {
   const { user_id, text: _product, response_url, channel_name } = req.body // extract payload from slash command
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
   const cn = channel_name.toLowerCase()
@@ -167,27 +167,22 @@ const route = async (req, res) => {
   const payload = { product, response_url }
   const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
 
-  try {
-    const isUserInGroup = await userInGroup({ user_id, groups })
-
+  return userInGroup({ user_id, groups }).then((isUserInGroup) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
-
     if (!DEPLOYED) {
-      worker(payload).catch(console.error)
-    } else {
-      invokeSlackWorker({ type: 'diff', payload })
+      return worker(payload).catch(console.error)
     }
-
-    return res.status(200).json({
-      response_type: 'ephemeral',
-      text: `Diffing for ${product}...`,
-    })
-  } catch(err) {
+    return invokeSlackWorker({ type: 'diff', payload })
+  }).then(() => res.status(200).json({
+    response_type: 'ephemeral',
+    text: `Diffing for ${product}...`,
+  })).catch((err) => {
+    console.warn(`Request: ${req.body}`)
     console.error(err)
     return res.status(200).json({ response_type: 'ephemeral', text: `Failed to diff:\n${errMsg(err)}` })
-  }
+  })
 }
 
 module.exports = { worker, route }
