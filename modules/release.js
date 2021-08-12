@@ -75,6 +75,7 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
   return axios.post(response_url, { replace_original: false, ...r })
 }
 
+// TODO: not supporting `async` handler well, staying with promise + callback for now
 const route = (req, res) => {
   const { user_id, text, response_url } = req.body // extract payload from slash command
   const [repo, stage] = text.trim().split(/\s+/) // parse out repo[, stage or semver-severity]

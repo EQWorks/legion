@@ -1,13 +1,12 @@
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
-const { gCalendarGetEvents } = require('../google-api/googleapis')
 const { parseCommits } = require('@eqworks/release')
 
+const { gCalendarGetEvents } = require('../google-api/googleapis')
 const { SERVICES, CLIENTS } = require('./products')
-const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
+const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('./util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
-
 
 const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
 
@@ -165,18 +164,21 @@ const worker = async ({ product, response_url }) => {
   return axios.post(response_url, { replace_original: true, ...r })
 }
 
+// TODO: not supporting `async` handler well, staying with promise + callback for now
 const route = (req, res) => {
-  const { user_id, text: _product, response_url, channel_name } = req.body // extract payload from slash command
-  const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
-  const cn = channel_name.toLowerCase() // TODO: this is not working atm
-  const product = _product || (products.includes(cn) ? cn : 'firstorder')
-  const payload = { product, response_url }
-  const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
+  const { user_id, text: _product, response_url } = req.body // extract payload from slash command
+  let product // TODO: a bit anti-pattern?
 
-  return userInGroup({ user_id, groups }).then((isUserInGroup) => {
+  return getChannelName(req.body).then((cn) => {
+    const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
+    product = _product || (products.includes(cn) ? cn : 'firstorder')
+    const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
+    return userInGroup({ user_id, groups })
+  }).then((isUserInGroup) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
+    const payload = { product, response_url }
     if (!DEPLOYED) {
       return worker(payload).catch(console.error)
     }
