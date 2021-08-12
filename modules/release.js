@@ -3,17 +3,16 @@ const axios = require('axios')
 const { SERVICES, CLIENTS } = require('./products')
 const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
 
-
 const { GITHUB_USER = 'woozyking', GITHUB_TOKEN, DEPLOYED = false } = process.env
 
-const BASE_OPTS = {
+const github = axios.create({
   baseURL: 'https://api.github.com',
   headers: { accept: 'application/vnd.github.v3+json' },
   auth: {
     username: GITHUB_USER,
     password: GITHUB_TOKEN,
   },
-}
+})
 const VERSIONED = ['snoke', 'overlord']
 const VER_POS = {
   'x': 0,
@@ -32,8 +31,7 @@ const getNextVersion = async ({ repo, stage = 'dev' }) => {
     return `${stage}-${new Date().toISOString().replace(/(-|:|T)/g, '').slice(0, 12)}`
   }
   // semver ones
-  const { data: { tag_name } } = await axios({
-    ...BASE_OPTS,
+  const { data: { tag_name } } = await github({
     method: 'get',
     url: `/repos/EQWorks/${repo}/releases/latest`,
   })
@@ -54,8 +52,7 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
   const tag_name = await getNextVersion({ repo, stage })
   const repoTag = `${repo} (${tag_name})`
   try {
-    const { data = {} } = await axios({
-      ...BASE_OPTS,
+    const { data = {} } = await github({
       method: 'post',
       url: `/repos/EQWorks/${repo}/releases`,
       data: {
@@ -75,7 +72,6 @@ const worker = async ({ repo, stage = 'dev', response_url }) => {
   return axios.post(response_url, { replace_original: false, ...r })
 }
 
-// TODO: not supporting `async` handler well, staying with promise + callback for now
 const route = (req, res) => {
   const { user_id, text, response_url } = req.body // extract payload from slash command
   const [repo, stage] = text.trim().split(/\s+/) // parse out repo[, stage or semver-severity]
@@ -88,11 +84,10 @@ const route = (req, res) => {
     }
 
     const payload = { repo, stage, response_url }
-    if (!DEPLOYED) {
-      return worker(payload).catch(console.error)
+    if (DEPLOYED) {
+      return invokeSlackWorker({ type: 'release', payload })
     }
-
-    return invokeSlackWorker({ type: 'release', payload })
+    worker(payload).catch(console.error) // run in async (no return) for local worker
   }).then(() => res.status(200).json({
     response_type: 'in_channel',
     text: `<@${user_id}> is releasing ${repoStage}...`,

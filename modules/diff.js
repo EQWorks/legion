@@ -8,10 +8,21 @@ const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('./ut
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
+const github = axios.create({
+  baseURL: 'https://api.github.com',
+  headers: { accept: 'application/vnd.github.v3+json' },
+  auth: {
+    username: 'woozyking',
+    password: GITHUB_TOKEN,
+  },
+})
+
 const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
-  if (base === head) {
+  const { data: { commits, status } } = await github.get(`/repos/EQWorks/${product}/compare/${base}...${head}`)
+
+  if (!commits.length) {
     return {
       response_type: 'ephemeral',
       blocks: [
@@ -25,17 +36,6 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
       ],
     }
   }
-
-  const { data: { commits, status } } = await axios.get(
-    `/repos/EQWorks/${product}/compare/${base}...${head}`,
-    {
-      baseURL: 'https://api.github.com',
-      auth: {
-        username: 'woozyking',
-        password: GITHUB_TOKEN,
-      },
-    }
-  )
 
   const contributors = new Set([])
   const noMerges = commits
@@ -136,7 +136,7 @@ const getServiceMeta = async (product) => {
 }
 
 const getClientMeta = async (product) => {
-  const { siteId = '', stages = [], head = 'master' } = CLIENTS[product] || {}
+  const { siteId = '', stages = [] } = CLIENTS[product] || {}
   const [dev, prod] = stages
 
   const netlify = new NetlifyAPI(NETLIFY_TOKEN)
@@ -145,8 +145,10 @@ const getClientMeta = async (product) => {
   if (!base) {
     throw new Error(`${product} has not been published on Netlify`)
   }
+  // get default branch as head
+  const { data: { default_branch } } = await github.get(`/repos/EQWorks/${product}`)
 
-  return { head, base, dev, prod }
+  return { head: default_branch, base, dev, prod }
 }
 
 const worker = async ({ product, response_url }) => {
@@ -161,14 +163,12 @@ const worker = async ({ product, response_url }) => {
     r = await getGitDiff({ product, ...await getClientMeta(product) })
   }
 
-  return axios.post(response_url, { replace_original: true, ...r })
+  return axios.post(response_url, { replace_original: false, ...r })
 }
 
-// TODO: not supporting `async` handler well, staying with promise + callback for now
 const route = (req, res) => {
   const { user_id, text: _product, response_url } = req.body // extract payload from slash command
-  let product // TODO: a bit anti-pattern?
-
+  let product
   return getChannelName(req.body).then((cn) => {
     const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
     product = _product || (products.includes(cn) ? cn : 'firstorder')
@@ -179,10 +179,10 @@ const route = (req, res) => {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
     const payload = { product, response_url }
-    if (!DEPLOYED) {
-      return worker(payload).catch(console.error)
+    if (DEPLOYED) {
+      return invokeSlackWorker({ type: 'diff', payload })
     }
-    return invokeSlackWorker({ type: 'diff', payload })
+    worker(payload).catch(console.error) // run in async (no return) for local worker
   }).then(() => res.status(200).json({
     response_type: 'ephemeral',
     text: `Diffing for ${product}...`,
