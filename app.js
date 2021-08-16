@@ -217,10 +217,5 @@ if (require.main === module) {
     console.log(`Listening on port ${PORT}`)
   })
 } else {
-  const Sentry = require('@sentry/serverless')
-  Sentry.AWSLambda.init({
-    dsn: 'https://9449c478de4e4036b9ee4f296cb15106@o136261.ingest.sentry.io/5851599',
-    tracesSampleRate: 1.0,
-  })
-  module.exports.handler = Sentry.AWSLambda.wrapHandler(serverless(app))
+  module.exports.handler = serverless(app)
 }

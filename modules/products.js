@@ -26,13 +26,11 @@ module.exports.CLIENTS = {
   overlord: {
     siteId: 'overlord.eqworks.io',
     stages: ['master', 'prod'],
-    head: 'master',
     groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
   },
   snoke: {
     siteId: 'console.locus.place',
     stages: ['dev', 'prod'],
-    head: 'master',
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
 }

@@ -1,18 +1,28 @@
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
-const { gCalendarGetEvents } = require('../google-api/googleapis')
 const { parseCommits } = require('@eqworks/release')
 
+const { gCalendarGetEvents } = require('../google-api/googleapis')
 const { SERVICES, CLIENTS } = require('./products')
-const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
+const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('./util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
+const github = axios.create({
+  baseURL: 'https://api.github.com',
+  headers: { accept: 'application/vnd.github.v3+json' },
+  auth: {
+    username: 'woozyking',
+    password: GITHUB_TOKEN,
+  },
+})
 
 const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
-  if (base === head) {
+  const { data: { commits, status } } = await github.get(`/repos/EQWorks/${product}/compare/${base}...${head}`)
+
+  if (!commits.length) {
     return {
       response_type: 'ephemeral',
       blocks: [
@@ -26,17 +36,6 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
       ],
     }
   }
-
-  const { data: { commits, status } } = await axios.get(
-    `/repos/EQWorks/${product}/compare/${base}...${head}`,
-    {
-      baseURL: 'https://api.github.com',
-      auth: {
-        username: 'woozyking',
-        password: GITHUB_TOKEN,
-      },
-    }
-  )
 
   const contributors = new Set([])
   const noMerges = commits
@@ -72,7 +71,6 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     }
   })
   const hasBreaking = mayBreak(formatted)
-  const demos = await gCalendarGetEvents()
   const r = {
     response_type: 'in_channel',
     attachments: [
@@ -103,6 +101,13 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     r.attachments[0].blocks[0].text.text += `\n\nContributors: ${Array.from(contributors).join(', ')}`
   }
   // link to demos calendar
+  let demos = null
+  try {
+    demos = await gCalendarGetEvents()
+  } catch (err) {
+    console.warn('Failed to obtain demo calendar events')
+    console.error(err)
+  }
   if (demos) {
     const { day, link, events } = demos
     r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
@@ -131,7 +136,7 @@ const getServiceMeta = async (product) => {
 }
 
 const getClientMeta = async (product) => {
-  const { siteId = '', stages = [], head = 'master' } = CLIENTS[product] || {}
+  const { siteId = '', stages = [] } = CLIENTS[product] || {}
   const [dev, prod] = stages
 
   const netlify = new NetlifyAPI(NETLIFY_TOKEN)
@@ -140,8 +145,10 @@ const getClientMeta = async (product) => {
   if (!base) {
     throw new Error(`${product} has not been published on Netlify`)
   }
+  // get default branch as head
+  const { data: { default_branch } } = await github.get(`/repos/EQWorks/${product}`)
 
-  return { head, base, dev, prod }
+  return { head: default_branch, base, dev, prod }
 }
 
 const worker = async ({ product, response_url }) => {
@@ -156,38 +163,34 @@ const worker = async ({ product, response_url }) => {
     r = await getGitDiff({ product, ...await getClientMeta(product) })
   }
 
-  return axios.post(response_url, { replace_original: true, ...r })
+  return axios.post(response_url, { replace_original: false, ...r })
 }
 
-const route = async (req, res) => {
-  const { user_id, text: _product, response_url, channel_name } = req.body // extract payload from slash command
-  const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
-  const cn = channel_name.toLowerCase()
-  const product = _product || (products.includes(cn) ? cn : 'firstorder')
-  const payload = { product, response_url }
-  const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
-
-  try {
-    const isUserInGroup = await userInGroup({ user_id, groups })
-
+const route = (req, res) => {
+  const { user_id, text: _product, response_url } = req.body // extract payload from slash command
+  let product
+  return getChannelName(req.body).then((cn) => {
+    const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
+    product = _product || (products.includes(cn) ? cn : 'firstorder')
+    const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
+    return userInGroup({ user_id, groups })
+  }).then((isUserInGroup) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
-
-    if (!DEPLOYED) {
-      worker(payload).catch(console.error)
-    } else {
-      invokeSlackWorker({ type: 'diff', payload })
+    const payload = { product, response_url }
+    if (DEPLOYED) {
+      return invokeSlackWorker({ type: 'diff', payload })
     }
-
-    return res.status(200).json({
-      response_type: 'ephemeral',
-      text: `Diffing for ${product}...`,
-    })
-  } catch(err) {
+    worker(payload).catch(console.error) // run in async (no return) for local worker
+  }).then(() => res.status(200).json({
+    response_type: 'ephemeral',
+    text: `Diffing for ${product}...`,
+  })).catch((err) => {
+    console.warn(`Request: ${req.body}`)
     console.error(err)
     return res.status(200).json({ response_type: 'ephemeral', text: `Failed to diff:\n${errMsg(err)}` })
-  }
+  })
 }
 
 module.exports = { worker, route }

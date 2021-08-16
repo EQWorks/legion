@@ -13,9 +13,8 @@
   "dependencies": {
     "@eqworks/avail-bot": "^1.0.7",
     "@eqworks/release": "^3.1.0",
-    "@sentry/serverless": "^6.8.0",
     "@slack/web-api": "^5.7.0",
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "express": "^4.16.3",
     "googleapis": "^66.0.0",
     "lodash.samplesize": "^4.2.0",
