@@ -3,10 +3,10 @@ const serverless = require('serverless-http')
 const axios = require('axios')
 
 const { lambda, getFuncName } = require('./modules/util')
-const modules = require('./modules')
-const { verifySlack } = require('./modules/middleware')
-const { bdayInteractive } = require('./modules/bday-interactive')
-const { gCalendarCreateEvent } = require('./google-api/googleapis')
+const { routes } = require('./modules')
+const { verifySlack } = require('./modules/lib/middleware')
+const { bdayInteractive } = require('./modules/lib/bday-interactive')
+const { gCalendarCreateEvent } = require('./modules/lib/googleapis')
 
 const { DEPLOYED } = process.env
 const app = express()
@@ -29,7 +29,7 @@ if (process.env.DEPLOYED) {
 }
 
 // secondary prefix for backward compat
-Object.entries(modules).forEach(([uri, { route }]) => {
+Object.entries(routes).forEach(([uri, { route }]) => {
   app.use(`/${uri}`, route)
 })
 
@@ -158,7 +158,7 @@ app.use('/interactive', (req, res) => {
       sender
     }
 
-    const { worker } = modules['bday']
+    const { worker } = routes.bday
 
     if (DEPLOYED) {
       lambda.invoke({

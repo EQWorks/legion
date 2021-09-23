@@ -2,9 +2,9 @@ const axios = require('axios')
 const NetlifyAPI = require('netlify')
 const { parseCommits } = require('@eqworks/release')
 
-const { gCalendarGetEvents } = require('../google-api/googleapis')
-const { SERVICES, CLIENTS } = require('./products')
-const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('./util')
+const { gCalendarGetEvents } = require('../lib/googleapis')
+const { SERVICES, CLIENTS } = require('../lib/products')
+const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 

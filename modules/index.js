@@ -1,16 +1,16 @@
-const demo = require('./demo')
-const diff = require('./diff')
-const food = require('./food')
-const pipeline = require('./pipeline')
-const avail = require('./availability')
-const vacay = require('./vacation')
-const slack = require('./slack')
-const notes = require('./notes')
-const bday = require('./bday')
-const release = require('./release')
+const demo = require('./routes/demo')
+const diff = require('./routes/diff')
+const food = require('./routes/food')
+const pipeline = require('./routes/pipeline')
+const avail = require('./routes/avail')
+const vacay = require('./routes/vacay')
+const slack = require('./routes/slack')
+const notes = require('./routes/notes')
+const bday = require('./routes/bday')
+const release = require('./routes/release')
 
 
-module.exports = {
+module.exports.routes = {
   demo,
   diff,
   food,

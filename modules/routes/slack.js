@@ -1,6 +1,7 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
-const { lambda, getFuncName  } = require('./util')
+
+const { lambda, getFuncName  } = require('../lib/util')
 
 const { DEPLOYED = false } = process.env
 

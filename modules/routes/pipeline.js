@@ -1,6 +1,6 @@
 const axios = require('axios')
 
-const { lambda, datapipeline, getFuncName } = require('./util')
+const { lambda, datapipeline, getFuncName } = require('../lib/util')
 
 const { PIPELINE_LIMIT = 300, DEPLOYED = false } = process.env
 

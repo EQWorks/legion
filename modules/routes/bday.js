@@ -1,6 +1,7 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
-const { lambda, getFuncName } = require('./util')
+
+const { lambda, getFuncName } = require('../lib/util')
 const {
   _blocks,
   button,
@@ -13,7 +14,7 @@ const {
   sendConfirmation,
   defaultBlock,
   celebrateBlocks,
-} = require('./bday-blocks')
+} = require('../lib/bday-blocks')
 
 
 const GENERAL_CHANNEL_ID = 'C1FDR4QJF'
