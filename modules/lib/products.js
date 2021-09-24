@@ -1,3 +1,5 @@
+const { Deta } = require('deta')
+
 const { getSpecificGroupIds } = require('./util')
 
 // TODO: only supports 2-stage comparison for now
@@ -33,4 +35,33 @@ module.exports.CLIENTS = {
     stages: ['dev', 'prod'],
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
+}
+
+module.exports.getSetLock = (dbName) => async ({ user_id, channel, product }) => {
+  if (!process.env.DETA_KEY) {
+    return true
+  }
+  const deta = Deta(process.env.DETA_KEY)
+  const db = deta.Base(dbName)
+  const key = `${channel}::${product}`
+  const exists = await db.get(key)
+  if (exists) {
+    return { ...exists, locked: true }
+  }
+  return await db.put({
+    timestamp: new Date(),
+    user_id,
+    channel,
+    product,
+  }, key)
+}
+
+module.exports.releaseLock = (dbName) => ({ channel, product }) => {
+  if (!process.env.DETA_KEY) {
+    return
+  }
+  const deta = Deta(process.env.DETA_KEY)
+  const db = deta.Base(dbName)
+  const key = `${channel}::${product}`
+  return db.delete(key) // returns null regardless
 }
