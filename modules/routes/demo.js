@@ -1,5 +1,6 @@
-const {  invokeSlackWorker, errMsg } = require('./util')
 const { WebClient } = require('@slack/web-api')
+
+const { invokeSlackWorker, errMsg } = require('../lib/util')
 
 
 const { DEPLOYED, SLACK_OAUTH } = process.env

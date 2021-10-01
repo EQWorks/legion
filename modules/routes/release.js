@@ -1,7 +1,7 @@
 const axios = require('axios')
 
-const { SERVICES, CLIENTS } = require('./products')
-const { userInGroup, invokeSlackWorker, errMsg } = require('./util')
+const { SERVICES, CLIENTS } = require('../lib/products')
+const { userInGroup, invokeSlackWorker, errMsg } = require('../lib/util')
 
 const { GITHUB_USER = 'woozyking', GITHUB_TOKEN, DEPLOYED = false } = process.env
 

@@ -2,9 +2,9 @@ const axios = require('axios')
 const NetlifyAPI = require('netlify')
 const { parseCommits } = require('@eqworks/release')
 
-const { gCalendarGetEvents } = require('../google-api/googleapis')
-const { SERVICES, CLIENTS } = require('./products')
-const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('./util')
+const { gCalendarGetEvents } = require('../lib/googleapis')
+const { SERVICES, CLIENTS, getSetLock, releaseLock } = require('../lib/products')
+const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
 
@@ -151,7 +151,10 @@ const getClientMeta = async (product) => {
   return { head: default_branch, base, dev, prod }
 }
 
-const worker = async ({ product, response_url }) => {
+const getSetDiffLock = getSetLock('diff_lock')
+const releaseDiffLock = releaseLock('diff_locks')
+
+const worker = async ({ channel, product, response_url }) => {
   let r = {
     response_type: 'ephemeral',
     text: `Sorry, product ${product} not found`,
@@ -162,23 +165,32 @@ const worker = async ({ product, response_url }) => {
   } else if (Object.keys(CLIENTS).includes(product)) {
     r = await getGitDiff({ product, ...await getClientMeta(product) })
   }
-
+  releaseDiffLock({ channel, product }) // no need to await as it releases regardless
   return axios.post(response_url, { replace_original: false, ...r })
 }
 
 const route = (req, res) => {
   const { user_id, text: _product, response_url } = req.body // extract payload from slash command
   let product
+  let channel
   return getChannelName(req.body).then((cn) => {
     const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
     product = _product || (products.includes(cn) ? cn : 'firstorder')
+    channel = cn
     const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
     return userInGroup({ user_id, groups })
   }).then((isUserInGroup) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
-    const payload = { product, response_url }
+    const { locked, ...lockMeta } = getSetDiffLock({ user_id, channel, product })
+    if (locked) {
+      return res.status(200).json({
+        response_type: 'ephemeral',
+        text: `Diffing for ${product} in ${channel} in progress, initiated by ${lockMeta.user_id} at ${lockMeta.timestamp}`,
+      })
+    }
+    const payload = { channel, product, response_url }
     if (DEPLOYED) {
       return invokeSlackWorker({ type: 'diff', payload })
     }

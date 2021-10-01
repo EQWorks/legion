@@ -1,20 +1,12 @@
 const { google } = require('googleapis')
 
-const {
-  GOOGLE_CLIENT_ID,
-  GOOGLE_SECRET_KEY,
-  GOOGLE_DEMO_CALENDAR,
-  GOOGLE_REFRESH_TOKEN,
-} = process.env
+const { GOOGLE_CLIENT_ID, GOOGLE_SECRET_KEY, GOOGLE_DEMO_CALENDAR, GOOGLE_REFRESH_TOKEN } = process.env
 
 /*
   https://developers.google.com/calendar/quickstart/nodejs
   https://developers.google.com/calendar/v3/reference/events/list#try-it
 */
-const oauth2Client = new google.auth.OAuth2(
-  GOOGLE_CLIENT_ID,
-  GOOGLE_SECRET_KEY
-)
+const oauth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_SECRET_KEY)
 
 oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN })
 

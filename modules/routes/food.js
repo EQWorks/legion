@@ -2,7 +2,7 @@
 const axios = require('axios')
 const sampleSize = require('lodash.samplesize')
 
-const { lambda, getFuncName  } = require('./util')
+const { lambda, getFuncName  } = require('../lib/util')
 
 const { YELP_API_KEY, DEPLOYED = false } = process.env
 

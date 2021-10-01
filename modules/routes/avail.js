@@ -1,6 +1,7 @@
 const axios = require('axios')
 const { getTasksForProject } = require('@eqworks/avail-bot')
-const { lambda, getFuncName  } = require('./util')
+
+const { lambda, getFuncName  } = require('../lib/util')
 
 const { DEPLOYED = false } = process.env
 const ASANA_LINK = 'https://app.asana.com/0/1152701043959235/timeline'
