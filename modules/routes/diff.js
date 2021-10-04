@@ -183,7 +183,7 @@ const route = (req, res) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
-    return getSetDiffLock({ user_id, channel, product })
+    return getSetDiffLock({ user_id, channel, product, hard: false })
   }).then(({ locked, ...lockMeta }) => {
     if (locked) {
       return res.status(200).json({
