@@ -57,7 +57,7 @@ module.exports.getSetLock = (dbName) => async ({ user_id, channel, product, key:
   const payload = { timestamp, user_id, channel, product }
   const key = _key || this.getKey({ channel, product, timestamp })
   if (hard) { // use deta.Base.insert to force error if already exists
-    return await db.insert(payload, key).catch(() => ({ ...payload, hard, locked: true }))
+    return await db.insert(payload, key).catch(() => ({ ...payload, key, hard, locked: true }))
   }
   const exists = await db.get(key)
   if (exists) {
