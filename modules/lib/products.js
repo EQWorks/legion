@@ -37,7 +37,7 @@ module.exports.CLIENTS = {
   },
 }
 
-const getKey = ({ channel, product, timestamp, tsFloor = 1000 * 60 * 5 }) => {
+module.exports.getKey = ({ channel, product, timestamp = new Date(), tsFloor = 1000 * 60 * 5 }) => {
   let key = `${channel}::${product}`
   if (tsFloor > 0) {
     const rounded = new Date(Math.floor(timestamp.getTime() / tsFloor) * tsFloor)
@@ -47,15 +47,15 @@ const getKey = ({ channel, product, timestamp, tsFloor = 1000 * 60 * 5 }) => {
   return key
 }
 
-module.exports.getSetLock = (dbName) => async ({ user_id, channel, product, hard = true, tsFloor = 1000 * 60 * 5 }) => {
+module.exports.getSetLock = (dbName) => async ({ user_id, channel, product, key: _key, hard = true }) => {
   if (!process.env.DETA_KEY) {
     return true
   }
   const deta = Deta(process.env.DETA_KEY)
   const db = deta.Base(dbName)
   const timestamp = new Date()
-  const key = getKey({ channel, product, timestamp, tsFloor })
   const payload = { timestamp, user_id, channel, product }
+  const key = _key || this.getKey({ channel, product, timestamp })
   if (hard) { // use deta.Base.insert to force error if already exists
     return await db.insert(payload, key).catch(() => ({ ...payload, hard, locked: true }))
   }
@@ -66,13 +66,11 @@ module.exports.getSetLock = (dbName) => async ({ user_id, channel, product, hard
   return await db.put(payload, key)
 }
 
-module.exports.releaseLock = (dbName) => ({ channel, product, tsFloor = 1000 * 60 * 5 }) => {
+module.exports.releaseLock = (dbName) => (key) => {
   if (!process.env.DETA_KEY) {
     return
   }
   const deta = Deta(process.env.DETA_KEY)
   const db = deta.Base(dbName)
-  const timestamp = new Date()
-  const key = getKey({ channel, product, timestamp, tsFloor })
   return db.delete(key) // returns null regardless
 }
