@@ -3,7 +3,7 @@ const NetlifyAPI = require('netlify')
 const { parseCommits } = require('@eqworks/release')
 
 const { gCalendarGetEvents } = require('../lib/googleapis')
-const { SERVICES, CLIENTS, getSetLock, releaseLock } = require('../lib/products')
+const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
 const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
@@ -165,7 +165,7 @@ const worker = async ({ channel, product, response_url }) => {
   } else if (Object.keys(CLIENTS).includes(product)) {
     r = await getGitDiff({ product, ...await getClientMeta(product) })
   }
-  releaseDiffLock({ channel, product }) // no need to await as it releases regardless
+  releaseDiffLock(getKey({ channel, product })) // no need to await as it releases regardless
   return axios.post(response_url, { replace_original: false, ...r })
 }
 
@@ -183,7 +183,8 @@ const route = (req, res) => {
     if (!isUserInGroup) {
       return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
     }
-    const { locked, ...lockMeta } = getSetDiffLock({ user_id, channel, product })
+    return getSetDiffLock({ user_id, channel, product, hard: false })
+  }).then(({ locked, ...lockMeta }) => {
     if (locked) {
       return res.status(200).json({
         response_type: 'ephemeral',
