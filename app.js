@@ -2,7 +2,7 @@ const express = require('express')
 const serverless = require('serverless-http')
 const axios = require('axios')
 
-const { lambda, getFuncName } = require('./modules/util')
+const { lambda, getFuncName } = require('./modules/lib/util')
 const { routes } = require('./modules')
 const { verifySlack } = require('./modules/lib/middleware')
 const { bdayInteractive } = require('./modules/lib/bday-interactive')

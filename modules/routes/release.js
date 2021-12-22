@@ -13,6 +13,9 @@ const github = axios.create({
     password: GITHUB_TOKEN,
   },
 })
+// from the official semver documentation, with the addition of an optional 'v' in front
+// https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+const SEMVER_MATCH = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 const VERSIONED = ['snoke', 'overlord']
 const VER_POS = {
   'x': 0,
@@ -27,14 +30,14 @@ const VER_POS = {
 const isVersioned = (repo) => VERSIONED.includes(repo.toLowerCase())
 
 const getNextVersion = async ({ repo, stage = 'dev' }) => {
-  if (!isVersioned(repo) && !Object.keys(VER_POS).includes(stage)) {
-    return `${stage}-${new Date().toISOString().replace(/(-|:|T)/g, '').slice(0, 12)}`
-  }
-  // semver ones
   const { data: { tag_name } } = await github({
     method: 'get',
     url: `/repos/EQWorks/${repo}/releases/latest`,
   })
+  if (!isVersioned(repo) && (!SEMVER_MATCH.test(tag_name) || !Object.keys(VER_POS).includes(stage))) {
+    return `${stage}-${new Date().toISOString().replace(/(-|:|T)/g, '').slice(0, 12)}`
+  }
+  // semver ones
   const latest = tag_name.replace(/[^0-9.]/g, '').split('.').map(Number) // extract semver x.y.z
   latest[VER_POS[stage]] += 1
   return `v${latest.join('.')}`
