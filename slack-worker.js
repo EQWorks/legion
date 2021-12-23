@@ -1,8 +1,8 @@
-const modules = require('./modules')
+const { routes } = require('./modules')
 
 // `type` is the name of the export key in ./modules/index
 module.exports.handler = async ({ type, payload }) => {
-  const { worker } = modules[type]
+  const { worker } = routes[type]
   await worker(payload)
   return { statusCode: 200 }
 }
