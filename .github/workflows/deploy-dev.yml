@@ -43,6 +43,13 @@ jobs:
           # legion required environment variables
           PORTUNUS_TOKEN: ${{secrets.CD_PORTUNUS_TOKEN_JWT}}/19/dev
 
+      - name: Generate tag associated release notes
+        if: ${{ success() }}
+        run: npx @eqworks/release changelog -v --head ${GITHUB_REF##*/} --github
+        env:
+          GITHUB_OWNER: EQWorks
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Notify on deployment status
         if: ${{ always() }}
         run: notify deployment $GITHUB_REPOSITORY --commit=$GITHUB_SHA --stage=dev --status=$JOB_STATUS
