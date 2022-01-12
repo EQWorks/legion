@@ -24,6 +24,12 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
+// TODO: stub for Slack App Manifest settings.event_subscriptions.request_url
+app.all('/events', (req, res) => {
+  const { body: { challenge } = {} } = req
+  return res.status(200).json({ challenge })
+})
+
 if (process.env.DEPLOYED) {
   app.use(verifySlack)
 }
@@ -185,12 +191,6 @@ app.all('/interactive', (req, res) => {
       return res.sendStatus(200)
     }
   }
-})
-
-// TODO: stub for Slack App Manifest settings.event_subscriptions.request_url
-app.all('/events', (req, res) => {
-  const { body: { challenge } = {} } = req
-  return res.status(200).json({ challenge })
 })
 
 // catch-all error handler
