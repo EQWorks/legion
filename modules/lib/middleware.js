@@ -9,7 +9,7 @@ const _verify = ({
   rawBody,
 }) => {
   const hmac = crypto.createHmac('sha256', SLACK_SIGNING_SECRET)
-  const [version, hash] = signature.split('=')
+  const [version, hash] = (signature || '').split('=')
 
   // Check if the timestamp is too old
   const fiveMinutesAgo = parseInt(Date.now() / 1000) - (60 * 5)

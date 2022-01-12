@@ -30,7 +30,7 @@ if (process.env.DEPLOYED) {
 
 // secondary prefix for backward compat
 Object.entries(routes).forEach(([uri, { route }]) => {
-  app.use(`/${uri}`, route)
+  app.all(`/${uri}`, route)
 })
 
 /*
@@ -81,7 +81,7 @@ e.g.
   ]
 }
 */
-app.use('/interactive', (req, res) => {
+app.all('/interactive', (req, res) => {
   const parsed = JSON.parse(req.body.payload)
 
   const {
@@ -188,7 +188,7 @@ app.use('/interactive', (req, res) => {
 })
 
 // TODO: stub for Slack App Manifest settings.event_subscriptions.request_url
-app.use('/events', (req, res) => {
+app.all('/events', (req, res) => {
   const { body: { challenge } = {} } = req
   return res.status(200).json({ challenge })
 })
