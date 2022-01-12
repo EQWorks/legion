@@ -187,6 +187,12 @@ app.use('/interactive', (req, res) => {
   }
 })
 
+// TODO: stub for Slack App Manifest settings.event_subscriptions.request_url
+app.use('/events', (req, res) => {
+  const { body: { challenge } = {} } = req
+  return res.status(200).json({ challenge })
+})
+
 // catch-all error handler
 // eslint disable otherwise not able to catch errors
 // eslint-disable-next-line no-unused-vars
