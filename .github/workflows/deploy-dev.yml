@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: '3.8'
           architecture: 'x64'
 
       - uses: actions/cache@v2
@@ -32,16 +32,16 @@ jobs:
             ${{ runner.OS }}-build-
             ${{ runner.OS }}-
 
-      - run: python -m pip install print-env --pre
+      - run: python -m pip install print-env
       - run: npm install -g serverless @eqworks/notify
       - run: yarn install
-      - run: echo "PORTUNUS_TOKEN=$PORTUNUS_TOKEN" > .env && yarn deploy --stage dev
+      - run: env PORTUNUS_TOKEN=$PORTUNUS_TOKEN sls deploy --stage=dev
         env:
           # aws creds for deployment
           AWS_ACCESS_KEY_ID: ${{secrets.aws_access_key_id}}
           AWS_SECRET_ACCESS_KEY: ${{secrets.aws_secret_access_key}}
           # legion required environment variables
-          PORTUNUS_TOKEN: ${{secrets.CD_PORTUNUS_TOKEN_JWT}}/19/dev
+          PORTUNUS_TOKEN: ${{secrets.CD_PORTUNUS_TOKEN_JWT}}/legion/dev
 
       - name: Generate tag associated release notes
         if: ${{ success() }}
