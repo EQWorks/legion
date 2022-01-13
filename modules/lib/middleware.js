@@ -11,6 +11,10 @@ const _verify = ({
   const hmac = crypto.createHmac('sha256', SLACK_SIGNING_SECRET)
   const [version, hash] = (signature || '').split('=')
 
+  if (!version || !hash) {
+    return false
+  }
+
   // Check if the timestamp is too old
   const fiveMinutesAgo = parseInt(Date.now() / 1000) - (60 * 5)
   if (timestamp < fiveMinutesAgo) {
