@@ -46,12 +46,3 @@ module.exports.errMsg = (err) => `\`\`\`${err.toString()}\`\`\``
 module.exports.getSpecificGroupIds = (groups) => Object.entries(SLACK_GROUP_IDS)
   .filter(i => groups.includes(i[0]))
   .map(i => i[1])
-
-module.exports.getChannelName = async ({ channel_name, channel_id }) => {
-  let cn = channel_name
-  if (channel_name === 'privategroup') {
-    const { channel: { name } = {} } = await web.conversations.info({ channel: channel_id })
-    cn = name
-  }
-  return cn
-}
