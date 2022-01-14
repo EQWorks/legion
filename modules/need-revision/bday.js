@@ -399,4 +399,61 @@ const route = (req, res) => {
     }
   }
 }
+
+// would be viewHandler
+// if (callback_id === 'bday') {
+//   // manipulate data received from submission
+//   const { data = {}, errors = {} } = bdayInteractive({ type, values })
+//   if (Object.values(errors).length) {
+//     return res.status(200).json({ response_action: 'errors', errors })
+//   }
+//   const {
+//     ref,
+//     response_url,
+//     command,
+//     channel_id,
+//   } = JSON.parse(private_metadata)
+
+//   const payload = {
+//     ref,
+//     command,
+//     type,
+//     view_id: id,
+//     hash,
+//     response_url,
+//     data,
+//     blocks,
+//     action: actions[0] || [],
+//     channel_id,
+//     sender
+//   }
+
+//   const { worker } = routes.bday
+
+//   if (DEPLOYED) {
+//     lambda.invoke({
+//       FunctionName: getFuncName('slack'),
+//       InvocationType: 'Event',
+//       Payload: JSON.stringify({ type: 'bday', payload }),
+//     }, (err) => {
+//       if (err) {
+//         console.error(err)
+//         return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to process bday command' })
+//       }
+//       if (type === 'view_submission') {
+//         return res.status(200).json({ 'response_action': 'clear' })
+//       }
+//       return res.sendStatus(200)
+//     })
+//   } else {
+//     worker(payload).catch(console.error)
+//     if (type === 'view_submission') {
+//       // needs to have only <response_action> for modals submission
+//       return res.status(200).json({ 'response_action': 'clear' })
+//     }
+//     // modal interactions need to have acknowledgement
+//     return res.sendStatus(200)
+//   }
+// }
+
 module.exports = { worker, route }

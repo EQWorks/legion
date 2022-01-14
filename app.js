@@ -1,5 +1,7 @@
 const { App, AwsLambdaReceiver } = require('@slack/bolt')
 
+const { commands } = require('./modules')
+
 // https://slack.dev/bolt-js/deployments/aws-lambda
 const receiver = new AwsLambdaReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -27,10 +29,9 @@ const app = new App({
     trigger_id: '2956462218819.49467158547.0dae80ec6d595b045efcf7a8fee079e7'
   }
 */
-// TODO: ones that require rework are commented out
-app.command('/diff', require('./modules/commands/diff').listener)
-app.command('/food', require('./modules/commands/food').listener)
-// app.command('/demo', require('./modules/commands/demo').listener)
+Object.entries(commands).forEach(([name, { listener }]) => {
+  app.command(`/${name}`, listener)
+})
 
 // interactive views, by callback_id
 // TODO: ones that require rework are commented out
