@@ -2,10 +2,9 @@
 const axios = require('axios')
 const sampleSize = require('lodash.samplesize')
 
-const { lambda, getFuncName  } = require('../lib/util')
+const { invokeSlackWorker } = require('../lib/util')
 
-const { YELP_API_KEY, DEPLOYED = false } = process.env
-
+const { YELP_API_KEY } = process.env
 
 const worker = async ({ response_url, ...params }) => {
   const { data: { businesses, total } } = await axios.get('/businesses/search', {
@@ -87,38 +86,20 @@ const worker = async ({ response_url, ...params }) => {
   })
 }
 
-const route = (req, res) => {
-  const { text, response_url } = req.body
+const listener = async ({ command, ack, respond }) => {
+  await ack()
 
+  const { text, response_url } = command
   const [
-    term,
+    term = 'lunch',
     location = 'EQ Works',
     radius = 1000,
     max = 5,
   ] = (text || 'lunch').split(',').map(p => p.trim())
 
-  if (term === '') {
-    return res.status(200).json({ text: '`term` cannot be empty', mrkdwn: true })
-  }
-
   const payload = { term, location, radius, max, response_url, open_now: true }
-
-  if (DEPLOYED) {
-    lambda.invoke({
-      FunctionName: getFuncName('slack'),
-      InvocationType: 'Event',
-      Payload: JSON.stringify({ type: 'food', payload }),
-    }, (err) => {
-      if (err) {
-        console.error(err)
-        return res.status(200).json({ response_type: 'ephemeral', text: 'Failed to search' })
-      }
-      return res.status(200).json({ response_type: 'ephemeral', text: 'Searching for food...' })
-    })
-  } else {
-    worker(payload).catch(console.error)
-    return res.status(200).json({ response_type: 'ephemeral', text: 'Searching for food...' })
-  }
+  await invokeSlackWorker({ type: 'food', payload })
+  await respond('Searching for food...')
 }
 
-module.exports = { worker, route }
+module.exports = { worker, listener }

@@ -27,7 +27,14 @@ const app = new App({
     trigger_id: '2956462218819.49467158547.0dae80ec6d595b045efcf7a8fee079e7'
   }
 */
+// TODO: ones that require rework are commented out
 app.command('/diff', require('./modules/commands/diff').listener)
+app.command('/food', require('./modules/commands/food').listener)
+// app.command('/demo', require('./modules/commands/demo').listener)
+
+// interactive views, by callback_id
+// TODO: ones that require rework are commented out
+// app.view('demo',  require('./modules/commands/demo').viewHandler)
 
 module.exports.handler = async(...params) => {
   const handler = await receiver.start()

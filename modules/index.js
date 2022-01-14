@@ -1,7 +1,4 @@
-const demo = require('./routes/demo')
-const food = require('./routes/food')
 const pipeline = require('./routes/pipeline')
-const avail = require('./routes/avail')
 const vacay = require('./routes/vacay')
 const slack = require('./routes/slack')
 const notes = require('./routes/notes')
@@ -10,10 +7,7 @@ const release = require('./routes/release')
 
 
 module.exports.routes = {
-  demo,
-  food,
   pipeline,
-  avail,
   vacay,
   slack,
   notes,
@@ -23,4 +17,6 @@ module.exports.routes = {
 
 module.exports.commands = {
   diff: require('./commands/diff'),
+  food: require('./commands/food'),
+  demo: require('./commands/demo'), // TODO: needs work on the view handler
 }
