@@ -1,5 +1,4 @@
 const demo = require('./routes/demo')
-const diff = require('./routes/diff')
 const food = require('./routes/food')
 const pipeline = require('./routes/pipeline')
 const avail = require('./routes/avail')
@@ -12,7 +11,6 @@ const release = require('./routes/release')
 
 module.exports.routes = {
   demo,
-  diff,
   food,
   pipeline,
   avail,
@@ -21,4 +19,8 @@ module.exports.routes = {
   notes,
   bday,
   release,
+}
+
+module.exports.commands = {
+  diff: require('./commands/diff'),
 }

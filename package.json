@@ -1,18 +1,19 @@
 {
   "name": "legion",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "EQ Slack command proxy",
-  "main": "server.js",
+  "main": "app.js",
   "scripts": {
-    "start": "env $(print-env) DEPLOYED= nodemon app.js",
+    "start": "env $(print-env) serverless offline --noPrependStageInUrl",
     "deploy": "env $(print-env) sls deploy",
     "lint": "eslint --ext .js .",
     "test": "echo 'No test yet'",
-    "tunnel": "ngrok http 8000"
+    "tunnel": "ngrok http 3000"
   },
   "dependencies": {
     "@eqworks/avail-bot": "^1.0.7",
     "@eqworks/release": "^3.1.0",
+    "@slack/bolt": "^3.8.1",
     "@slack/web-api": "^5.7.0",
     "axios": "^0.21.1",
     "deta": "^1.0.1",
@@ -21,6 +22,7 @@
     "lodash.samplesize": "^4.2.0",
     "netlify": "^2.4.6",
     "serverless-http": "^2.0.2",
+    "serverless-offline": "^8.3.1",
     "tsscmp": "^1.0.6"
   },
   "engines": {

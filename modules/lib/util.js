@@ -1,7 +1,7 @@
 const { WebClient } = require('@slack/web-api')
 const AWS = require('aws-sdk')
 
-const { SLACK_OAUTH, STAGE = 'dev' } = process.env
+const { SLACK_OAUTH, STAGE = 'dev', AWS_REGION = 'us-east-1' } = process.env
 
 const web = new WebClient(SLACK_OAUTH)
 
@@ -16,7 +16,10 @@ const SLACK_GROUP_IDS = {
 
 module.exports.lambda = new AWS.Lambda({
   apiVersion: '2015-03-31',
-  region: 'us-east-1',
+  region: AWS_REGION,
+  endpoint: process.env.IS_OFFLINE // available through serverless-offline plugin
+    ? 'http://localhost:3002'
+    : 'https://lambda.us-east-1.amazonaws.com',
 })
 
 module.exports.getFuncName = f => `legion-${STAGE}-${f}`
@@ -26,7 +29,7 @@ module.exports.invokeSlackWorker = (Payload) => this.lambda.invoke({
   Payload: JSON.stringify(Payload),
 }).promise()
 
-module.exports.datapipeline = new AWS.DataPipeline({ region: 'us-east-1' })
+module.exports.datapipeline = new AWS.DataPipeline({ region: AWS_REGION })
 
 module.exports.listUserGroups = () => web.usergroups.list({
   include_users: true,

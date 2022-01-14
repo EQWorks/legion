@@ -4,9 +4,9 @@ const { parseCommits } = require('@eqworks/release')
 
 const { gCalendarGetEvents } = require('../lib/googleapis')
 const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
-const { userInGroup, invokeSlackWorker, errMsg, getChannelName } = require('../lib/util')
+const { userInGroup, invokeSlackWorker } = require('../lib/util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, DEPLOYED = false } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN } = process.env
 
 const github = axios.create({
   baseURL: 'https://api.github.com',
@@ -174,44 +174,33 @@ const worker = async ({
   return axios.post(response_url, { replace_original: false, ...r })
 }
 
-const route = async (req, res) => {
-  try {
-    const { user_id, text: _product, response_url } = req.body // extract payload from slash command
-
-    const channel = await getChannelName(req.body)
-    const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
-    const product = _product || (products.includes(channel) ? channel : 'firstorder')
-    const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
-    // check if user is in the group
-    const isUserInGroup = await userInGroup({ user_id, groups })
-    if (!isUserInGroup) {
-      return res.status(200).json({ response_type: 'ephemeral', text: `You cannot diff ${product}` })
-    }
-    // check deta.Base('diff_lock')
-    const timestamp = new Date()
-    const key = getKey({ channel, product, timestamp })
-    const { locked, ...lockMeta } = await getSetDiffLock({ user_id, channel, product, key, timestamp, hard: false })
-    if (locked) {
-      return res.status(200).json({
-        response_type: 'ephemeral',
-        text: `Diffing for ${product} in ${channel} in progress, initiated by ${lockMeta.user_id} at ${lockMeta.timestamp}`,
-      })
-    }
-    const payload = { channel, product, key, response_url }
-    if (DEPLOYED) {
-      await invokeSlackWorker({ type: 'diff', payload })
-    } else {
-      worker(payload).catch(console.error) // local async invoke
-    }
-    return res.status(200).json({
-      response_type: 'ephemeral',
-      text: `Diffing for ${product}...`,
-    })
-  } catch(err) {
-    console.warn(`Request: ${req.body}`)
-    console.error(err)
-    return res.status(200).json({ response_type: 'ephemeral', text: `Failed to diff:\n${errMsg(err)}` })
+const listener = async ({ command, ack, respond }) => {
+  // Acknowledge command request
+  await ack()
+  // preliminary check if the product can be diff'ed
+  const { text: _product, channel_name: channel, user_id, response_url } = command
+  const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
+  const product = _product || (products.includes(channel) ? channel : 'firstorder')
+  const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
+  // check if user is in the group
+  const isUserInGroup = await userInGroup({ user_id, groups })
+  if (!isUserInGroup) {
+    await respond(`You cannot diff ${product}`)
+    return
   }
+  // check deta.Base('diff_lock')
+  const timestamp = new Date()
+  const key = getKey({ channel, product, timestamp })
+  const { locked, ...lockMeta } = await getSetDiffLock({ user_id, channel, product, key, timestamp, hard: false })
+  if (locked) {
+    await respond(`Diffing for ${product} in ${channel} in progress, initiated by ${lockMeta.user_id} at ${lockMeta.timestamp}`)
+    return
+  }
+  // asynchronously invoke worker
+  const payload = { channel, product, key, response_url }
+  await invokeSlackWorker({ type: 'diff', payload })
+  // respond immediately
+  await respond(`Diffing for ${product}...`)
 }
 
-module.exports = { worker, route }
+module.exports = { worker, listener }

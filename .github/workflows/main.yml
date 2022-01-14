@@ -1,10 +1,7 @@
-name: Master
+name: Default workflow
 
 on:
   pull_request:
-    branches:
-      - main
-      - master
   push:
     branches:
       - main
@@ -20,40 +17,15 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Cache Node Modules
-        uses: actions/cache@v2
+      - uses: actions/cache@v2
         with:
-          path: node_modules
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/yarn.lock') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.OS }}-build-${{ env.cache-name }}-
-            ${{ runner.OS }}-build-
-            ${{ runner.OS }}-
+            ${{ runner.os }}-node-
 
-      - run: yarn install
-      - run: yarn lint
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 12.x
-
-      - name: Cache Node Modules
-        uses: actions/cache@v2
-        with:
-          path: node_modules
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-${{ env.cache-name }}-
-            ${{ runner.OS }}-build-
-            ${{ runner.OS }}-
-
-      - run: yarn install
-      - run: yarn test
+      - run: npm i
+      - run: npm run lint
 
   commit-watch:
     runs-on: ubuntu-latest
