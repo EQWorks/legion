@@ -35,7 +35,11 @@ Object.entries(commands).forEach(([name, { listener }]) => {
 
 // interactive views, by callback_id
 // TODO: ones that require rework are commented out
-// app.view('demo',  require('./modules/commands/demo').viewHandler)
+Object.entries(commands).forEach(([name, { viewHandler }]) => {
+  if (viewHandler) {
+    app.view(name,  viewHandler)
+  }
+})
 
 module.exports.handler = async(...params) => {
   const handler = await receiver.start()

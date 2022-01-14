@@ -8,7 +8,7 @@ const listener = async ({ ack, command, client }) => {
     trigger_id,
     // View payload
     view: {
-      'callback_id': 'demo2',
+      'callback_id': 'demo',
       'title': {
         'type': 'plain_text',
         'text': 'Demo Calendar',
