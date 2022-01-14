@@ -47,15 +47,20 @@ module.exports.getKey = ({ channel, product, timestamp = new Date(), tsFloor = 1
   return key
 }
 
-module.exports.getSetLock = (dbName) => async ({ user_id, channel, product, key: _key, hard = true }) => {
+module.exports.getSetLock = (dbName) => async ({
+  user_id,
+  channel,
+  product,
+  timestamp = new Date(),
+  key = this.getKey({ channel, product, timestamp }),
+  hard = true,
+}) => {
   if (!process.env.DETA_KEY) {
     return true
   }
   const deta = Deta(process.env.DETA_KEY)
   const db = deta.Base(dbName)
-  const timestamp = new Date()
   const payload = { timestamp, user_id, channel, product }
-  const key = _key || this.getKey({ channel, product, timestamp })
   if (hard) { // use deta.Base.insert to force error if already exists
     return await db.insert(payload, key).catch(() => ({ ...payload, key, hard, locked: true }))
   }
@@ -72,5 +77,5 @@ module.exports.releaseLock = (dbName) => (key) => {
   }
   const deta = Deta(process.env.DETA_KEY)
   const db = deta.Base(dbName)
-  return db.delete(key) // returns null regardless
+  return db.delete(key) // return null regardless, currently buggy
 }

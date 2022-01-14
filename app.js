@@ -24,13 +24,19 @@ app.get('/', (_, res, next) => {
   axios.get('https://api.github.com/zen').then(({ data }) => res.send(data)).catch(next)
 })
 
+// TODO: stub for Slack App Manifest settings.event_subscriptions.request_url
+app.all('/events', (req, res) => {
+  const { body: { challenge } = {} } = req
+  return res.status(200).json({ challenge })
+})
+
 if (process.env.DEPLOYED) {
   app.use(verifySlack)
 }
 
 // secondary prefix for backward compat
 Object.entries(routes).forEach(([uri, { route }]) => {
-  app.use(`/${uri}`, route)
+  app.all(`/${uri}`, route)
 })
 
 /*
@@ -81,7 +87,7 @@ e.g.
   ]
 }
 */
-app.use('/interactive', (req, res) => {
+app.all('/interactive', (req, res) => {
   const parsed = JSON.parse(req.body.payload)
 
   const {
