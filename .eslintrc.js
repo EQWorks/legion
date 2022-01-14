@@ -1,42 +1,10 @@
 module.exports = {
-  "env": {
-    "node": true,
-    "es6": true,
+  env: {
+    commonjs: true,
+    es2021: true,
+    node: true,
   },
-  "extends": [
-    "eslint:recommended",
-  ],
-  "parser": "babel-eslint",
-  "rules": {
-    "indent": [
-      "error",
-      2,
-    ],
-    "linebreak-style": [
-      "error",
-      "unix",
-    ],
-    "quotes": [
-      "error",
-      "single",
-      { "avoidEscape": true },
-    ],
-    "semi": [
-      "error",
-      "never",
-    ],
-    "no-console": [
-      "error",
-      { allow: ["warn", "error"] },
-    ],
-    "comma-dangle": [
-      "error",
-      "only-multiline",
-    ],
-    "no-unused-vars": [
-      "error",
-      { "ignoreRestSiblings": true },
-    ],
-    'object-curly-spacing': ['error', 'always'],
-  },
+  extends: 'eslint:recommended',
+  parserOptions: { ecmaVersion: 13 },
+  rules: {},
 }

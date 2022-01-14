@@ -17,13 +17,9 @@
     "@slack/web-api": "^5.7.0",
     "axios": "^0.21.1",
     "deta": "^1.0.1",
-    "express": "^4.16.3",
     "googleapis": "^66.0.0",
     "lodash.samplesize": "^4.2.0",
-    "netlify": "^2.4.6",
-    "serverless-http": "^2.0.2",
-    "serverless-offline": "^8.3.1",
-    "tsscmp": "^1.0.6"
+    "netlify": "^2.4.6"
   },
   "engines": {
     "node": "12.x"
@@ -34,15 +30,13 @@
   "license": "MIT",
   "keywords": [
     "node",
-    "express",
     "slack",
     "bot"
   ],
   "devDependencies": {
     "aws-sdk": "^2.597.0",
-    "babel-eslint": "^10.0.1",
-    "eslint": "^5.6.1",
+    "eslint": "^8.6.0",
     "ngrok": "^3.2.1",
-    "nodemon": "^1.18.4"
+    "serverless-offline": "^8.3.1"
   }
 }

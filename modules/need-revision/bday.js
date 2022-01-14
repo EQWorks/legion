@@ -164,7 +164,7 @@ const worker = async ({
 
       return Promise.all(
         members.map((id) => {
-          if (data.hasOwnProperty(id)){
+          if (data.id){
             /** skip bday person if single bday */
             if (bdayPeople.length === 1) return
             /** modify message in case of multiple bday */
