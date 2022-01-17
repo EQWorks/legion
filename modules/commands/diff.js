@@ -2,9 +2,9 @@ const axios = require('axios')
 const NetlifyAPI = require('netlify')
 const { parseCommits } = require('@eqworks/release')
 
-const { gCalendarGetEvents } = require('../lib/googleapis')
+// const { gCalendarGetEvents } = require('../lib/googleapis')
 const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
-const { userInGroup, invokeSlackWorker } = require('../lib/util')
+const { userInGroup, invokeSlackWorker, getChannelName } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN } = process.env
 
@@ -102,12 +102,13 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   }
   // link to demos calendar
   let demos = null
-  try {
-    demos = await gCalendarGetEvents()
-  } catch (err) {
-    console.warn('Failed to obtain demo calendar events')
-    console.error(err)
-  }
+  // TODO: needs rework
+  // try {
+  //   demos = await gCalendarGetEvents()
+  // } catch (err) {
+  //   console.warn('Failed to obtain demo calendar events')
+  //   console.error(err)
+  // }
   if (demos) {
     const { day, link, events } = demos
     r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
@@ -178,7 +179,8 @@ const listener = async ({ command, ack, respond }) => {
   // Acknowledge command request
   await ack()
   // preliminary check if the product can be diff'ed
-  const { text: _product, channel_name: channel, user_id, response_url } = command
+  const { text: _product, channel_name, channel_id, user_id, response_url } = command
+  const channel = await getChannelName({ channel_name, channel_id})
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
   const product = _product || (products.includes(channel) ? channel : 'firstorder')
   const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
