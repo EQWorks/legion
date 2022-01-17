@@ -41,6 +41,8 @@ plugins:
 functions:
   receiver:
     handler: app.handler
+    # keep this hot for immediate slack response
+    provisionedConcurrency: 1
     events:
       - http:
           path: slack/events
