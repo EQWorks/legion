@@ -1,5 +1,7 @@
 service: legion
 
+frameworkVersion: '2'
+
 provider:
   name: aws
   runtime: nodejs12.x
@@ -32,21 +34,17 @@ provider:
     GOOGLE_SECRET_KEY: ${env:GOOGLE_SECRET_KEY}
     GOOGLE_REFRESH_TOKEN: ${env:GOOGLE_REFRESH_TOKEN}
     GOOGLE_DEMO_CALENDAR: ${env:GOOGLE_DEMO_CALENDAR}
-    
+
+plugins:
+  - serverless-offline
+
 functions:
-  # Express.js based entry points API server
-  entry:
+  receiver:
     handler: app.handler
-    # keep this hot for immediate slack response
-    provisionedConcurrency: 1
     events:
       - http:
-          path: /
-          method: ANY
-          cors: true
-      - http:
-          path: '{proxy+}'
-          method: ANY
-          cors: true
+          path: slack/events
+          method: post
+
   slack:
-    handler: slack-worker.handler
+    handler: worker.handler

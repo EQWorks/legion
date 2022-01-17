@@ -25,16 +25,14 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: node_modules
-          key: ${{ runner.OS }}-build-${{ hashFiles('**/yarn.lock') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.OS }}-build-${{ env.cache-name }}-
-            ${{ runner.OS }}-build-
-            ${{ runner.OS }}-
+            ${{ runner.os }}-node-
 
       - run: python -m pip install print-env
       - run: npm install -g serverless @eqworks/notify
-      - run: yarn install
+      - run: npm install
       - run: env $(print-env) sls deploy --stage=dev
         env:
           # aws creds for deployment

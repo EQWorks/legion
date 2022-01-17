@@ -1,3 +1,4 @@
+// TODO: refactor to individual ping listner
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
 
