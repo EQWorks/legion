@@ -50,9 +50,11 @@ module.exports.getSpecificGroupIds = (groups) => Object.entries(SLACK_GROUP_IDS)
 
 module.exports.getChannelName = async ({ channel_name, channel_id }) => {
   let cn = channel_name
+  let ci = channel_id
   if (channel_name === 'privategroup') {
-    const { channel: { name } = {} } = await web.conversations.info({ channel: channel_id })
+    const { channel: { name, id } = {} } = await web.conversations.info({ channel: channel_id })
     cn = name
+    ci = id
   }
-  return cn
+  return { name: cn, id: ci }
 }

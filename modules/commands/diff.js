@@ -6,13 +6,13 @@ const { parseCommits } = require('@eqworks/release')
 const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
 const { userInGroup, invokeSlackWorker, getChannelName, getSpecificGroupIds } = require('../lib/util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN } = process.env
+const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking' } = process.env
 
 const github = axios.create({
   baseURL: 'https://api.github.com',
   headers: { accept: 'application/vnd.github.v3+json' },
   auth: {
-    username: 'woozyking',
+    username: GITHUB_USER,
     password: GITHUB_TOKEN,
   },
 })
@@ -20,7 +20,7 @@ const github = axios.create({
 const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
-  const { data: { commits, status } } = await github.get(`/repos/EQWorks/${product}/compare/${base}...${head}`)
+  const { data: { commits, status } } = await github.get(`/repos/${GITHUB_ORG}/${product}/compare/${base}...${head}`)
 
   if (!commits.length) {
     return {
@@ -144,10 +144,10 @@ const getClientMeta = async (product) => {
   const { published_deploy: { commit_ref: base = '' } = {} } = await netlify.getSite({ siteId })
 
   if (!base) {
-    throw new Error(`${product} has not been published on Netlify`)
+    throw new Error(`\`${product}\` has not been published on Netlify`)
   }
   // get default branch as head
-  const { data: { default_branch } } = await github.get(`/repos/EQWorks/${product}`)
+  const { data: { default_branch } } = await github.get(`/repos/${GITHUB_ORG}/${product}`)
 
   return { head: default_branch, base, dev, prod }
 }
@@ -173,16 +173,19 @@ const worker = async ({
   } else {
     // get repo metadata and latest tag/release
     const [meta, release] = await Promise.all([
-      github.get(`/repos/EQWorks/${product}`).then(({ data }) => data).catch(() => ({})),
-      github.get(`/repos/EQWorks/${product}/releases/latest`).then(({ data }) => data).catch(() => ({})),
+      github.get(`/repos/${GITHUB_ORG}/${product}`).then(({ data }) => data).catch(() => ({})),
+      github.get(`/repos/${GITHUB_ORG}/${product}/releases/latest`).then(({ data }) => data).catch(() => ({})),
     ])
     const { default_branch: head } = meta // head is also dev in this case
+    if (!head) {
+      return axios.post(response_url, { replace_original: true, text: `\`${product}\` is not found on GitHub` })
+    }
     const { tag_name: prod } = release
-    if (!head || !prod) {
-      throw new Error(`${product} has not been released on GitHub`)
+    if (!prod) {
+      return axios.post(response_url, { replace_original: true, text: `\`${product}\` has not been released on GitHub` })
     }
     // get latest release tag's commit hash as base
-    const { data: { object: { sha: base } } } = await github.get(`/repos/EQWorks/${product}/git/ref/tags/${prod}`)
+    const { data: { object: { sha: base } } } = await github.get(`/repos/${GITHUB_ORG}/${product}/git/ref/tags/${prod}`)
     r = await getGitDiff({ product, head, base, dev: head, prod })
   }
   await releaseDiffLock(key)
@@ -194,7 +197,7 @@ const listener = async ({ command, ack, respond }) => {
   await ack()
   // preliminary check if the product can be diff'ed
   const { text: _product, channel_name, channel_id, user_id, response_url } = command
-  const channel = await getChannelName({ channel_name, channel_id})
+  const { name: channel, id: ci } = await getChannelName({ channel_name, channel_id})
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
   const product = _product || (products.includes(channel) ? channel : 'firstorder')
   // get Slack group IDs, default to the @product-group's
@@ -210,7 +213,7 @@ const listener = async ({ command, ack, respond }) => {
   const key = getKey({ channel, product, timestamp })
   const { locked, ...lockMeta } = await getSetDiffLock({ user_id, channel, product, key, timestamp, hard: false })
   if (locked) {
-    await respond(`Diffing for ${product} in ${channel} in progress, initiated by ${lockMeta.user_id} at ${lockMeta.timestamp}`)
+    await respond(`Diffing for \`${product}\` in <#${ci}> in progress, initiated by <@${lockMeta.user_id}> at ${lockMeta.timestamp}`)
     return
   }
   // asynchronously invoke worker
