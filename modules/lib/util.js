@@ -12,6 +12,7 @@ const SLACK_GROUP_IDS = {
   'overlordteam': 'S1FG0BA3C',
   'overseerteam': 'S7KPS7K7S',
   'flashteam': 'S1FFKS7FS',
+  'product-group': 'S1FFRAXQA',
 }
 
 module.exports.lambda = new AWS.Lambda({

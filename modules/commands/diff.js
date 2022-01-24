@@ -4,7 +4,7 @@ const { parseCommits } = require('@eqworks/release')
 
 // const { gCalendarGetEvents } = require('../lib/googleapis')
 const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
-const { userInGroup, invokeSlackWorker, getChannelName } = require('../lib/util')
+const { userInGroup, invokeSlackWorker, getChannelName, getSpecificGroupIds } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN } = process.env
 
@@ -170,6 +170,20 @@ const worker = async ({
     r = await getGitDiff({ product, ...await getServiceMeta(product) })
   } else if (Object.keys(CLIENTS).includes(product)) {
     r = await getGitDiff({ product, ...await getClientMeta(product) })
+  } else {
+    // get repo metadata and latest tag/release
+    const [meta, release] = await Promise.all([
+      github.get(`/repos/EQWorks/${product}`).then(({ data }) => data).catch(() => ({})),
+      github.get(`/repos/EQWorks/${product}/releases/latest`).then(({ data }) => data).catch(() => ({})),
+    ])
+    const { default_branch: head } = meta // head is also dev in this case
+    const { tag_name: prod } = release
+    if (!head || !prod) {
+      throw new Error(`${product} has not been released on GitHub`)
+    }
+    // get latest release tag's commit hash as base
+    const { data: { object: { sha: base } } } = await github.get(`/repos/EQWorks/${product}/git/ref/tags/${prod}`)
+    r = await getGitDiff({ product, head, base, dev: head, prod })
   }
   await releaseDiffLock(key)
   return axios.post(response_url, { replace_original: false, ...r })
@@ -183,7 +197,8 @@ const listener = async ({ command, ack, respond }) => {
   const channel = await getChannelName({ channel_name, channel_id})
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
   const product = _product || (products.includes(channel) ? channel : 'firstorder')
-  const { groups = [] } = SERVICES[product] || CLIENTS[product] || {}
+  // get Slack group IDs, default to the @product-group's
+  const { groups = getSpecificGroupIds(['product-group']) } = SERVICES[product] || CLIENTS[product] || {}
   // check if user is in the group
   const isUserInGroup = await userInGroup({ user_id, groups })
   if (!isUserInGroup) {
@@ -205,4 +220,4 @@ const listener = async ({ command, ack, respond }) => {
   await respond(`Diffing for ${product}...`)
 }
 
-module.exports = { worker, listener }
+module.exports = { worker, listener, github }
