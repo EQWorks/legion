@@ -210,7 +210,7 @@ const listener = async ({ command, ack, respond }) => {
   const { text: _product, channel_name, channel_id, user_id, response_url } = command
   const { name: channel, id: ci } = await getChannelName({ channel_name, channel_id})
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
-  const product = _product || (products.includes(channel) ? channel : 'firstorder')
+  const product = _product.toLowerCase() || (products.includes(channel) ? channel : 'firstorder')
   // get Slack group IDs, default to the @product-group's
   const { groups = getSpecificGroupIds(['product-group']) } = SERVICES[product] || CLIENTS[product] || {}
   // check if user is in the group
