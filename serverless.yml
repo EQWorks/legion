@@ -1,6 +1,6 @@
 service: legion
 
-frameworkVersion: '2'
+frameworkVersion: '3'
 
 provider:
   name: aws
@@ -24,7 +24,7 @@ provider:
   # TODO: move these to specific functions below once re-arch is done
   environment:
     DEPLOYED: true
-    STAGE: ${opt:stage, self:provider.stage}
+    STAGE: ${sls:stage}
     SLACK_SIGNING_SECRET: ${env:SLACK_SIGNING_SECRET}
     GITHUB_TOKEN: ${env:GITHUB_TOKEN}
     NETLIFY_TOKEN: ${env:NETLIFY_TOKEN}
@@ -55,7 +55,7 @@ functions:
 custom:
   customDomain:
     domainName: legion.eqworks.io
-    basePath: ${opt:stage, self:provider.stage}
-    stage: ${opt:stage, self:provider.stage}
+    basePath: ${sls:stage}
+    stage: ${sls:stage}
     certificateName: '*.eqworks.io'
     createRoute53Record: true
