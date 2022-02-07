@@ -2,6 +2,13 @@ const { Deta } = require('deta')
 
 const { getSpecificGroupIds } = require('./util')
 
+// product bundles
+module.exports.BUNDLES = {
+  atom: ['overseer', 'overlord'],
+  locus: ['firstorder', 'snoke'],
+  notebook: ['firstorder', 'enrichdata', 'locussdk'],
+}
+
 // TODO: only supports 2-stage comparison for now
 module.exports.SERVICES = {
   overseer: {
