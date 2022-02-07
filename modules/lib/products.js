@@ -6,7 +6,7 @@ const { getSpecificGroupIds } = require('./util')
 module.exports.BUNDLES = {
   atom: ['overseer', 'overlord'],
   locus: ['firstorder', 'snoke'],
-  notebook: ['firstorder', 'enrichdata', 'locussdk'],
+  notebook: ['firstorder', 'enrichdata', 'locussdk', 'jupyterhub'],
 }
 
 // TODO: only supports 2-stage comparison for now
