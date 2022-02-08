@@ -3,7 +3,7 @@ const NetlifyAPI = require('netlify')
 const { parseCommits } = require('@eqworks/release')
 
 // const { gCalendarGetEvents } = require('../lib/googleapis')
-const { SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
+const { BUNDLES, SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
 const { userInGroup, invokeSlackWorker, getChannelName, getSpecificGroupIds } = require('../lib/util')
 
 const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking' } = process.env
@@ -155,17 +155,12 @@ const getClientMeta = async (product) => {
 const getSetDiffLock = getSetLock('diff_lock')
 const releaseDiffLock = releaseLock('diff_locks')
 
-const worker = async ({
-  channel,
-  product,
-  key = getKey({ channel, product }),
-  response_url,
-}) => {
+// individual product/github repo diff
+const getDiff = async (product) => {
   let r = {
     response_type: 'ephemeral',
     text: `Sorry, product ${product} not found`,
   }
-
   if (Object.keys(SERVICES).includes(product)) {
     r = await getGitDiff({ product, ...await getServiceMeta(product) })
   } else if (Object.keys(CLIENTS).includes(product)) {
@@ -178,18 +173,34 @@ const worker = async ({
     ])
     const { default_branch: head } = meta // head is also dev in this case
     if (!head) {
-      return axios.post(response_url, { replace_original: true, text: `\`${product}\` is not found on GitHub` })
+      return { ...r, text: `\`${product}\` is not found on GitHub` }
     }
     const { tag_name: prod } = release
     if (!prod) {
-      return axios.post(response_url, { replace_original: true, text: `\`${product}\` has not been released on GitHub` })
+      return { ...r, text: `\`${product}\` has not been released on GitHub` }
     }
     // get latest release tag's commit hash as base
     const { data: { object: { sha: base } } } = await github.get(`/repos/${GITHUB_ORG}/${product}/git/ref/tags/${prod}`)
     r = await getGitDiff({ product, head, base, dev: head, prod })
   }
+  return r
+}
+
+const worker = async ({
+  channel,
+  product,
+  key = getKey({ channel, product }),
+  response_url,
+}) => {
+  if (BUNDLES[product]) {
+    const rs = await Promise.all(BUNDLES[product].map(getDiff))
+    await releaseDiffLock(key)
+    return Promise.all(rs.map((r) => axios.post(response_url, r)))
+  }
+
+  const r = await getDiff(product)
   await releaseDiffLock(key)
-  return axios.post(response_url, { replace_original: false, ...r })
+  return axios.post(response_url, r)
 }
 
 const listener = async ({ command, ack, respond }) => {
@@ -199,7 +210,7 @@ const listener = async ({ command, ack, respond }) => {
   const { text: _product, channel_name, channel_id, user_id, response_url } = command
   const { name: channel, id: ci } = await getChannelName({ channel_name, channel_id})
   const products = [...Object.keys(SERVICES), ...Object.keys(CLIENTS)]
-  const product = _product || (products.includes(channel) ? channel : 'firstorder')
+  const product = _product.toLowerCase() || (products.includes(channel) ? channel : 'firstorder')
   // get Slack group IDs, default to the @product-group's
   const { groups = getSpecificGroupIds(['product-group']) } = SERVICES[product] || CLIENTS[product] || {}
   // check if user is in the group
