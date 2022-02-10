@@ -1,6 +1,6 @@
 const axios = require('axios')
 const NetlifyAPI = require('netlify')
-const { parseCommits } = require('@eqworks/release')
+const { parseCommits, groupParsed } = require('@eqworks/release')
 
 // const { gCalendarGetEvents } = require('../lib/googleapis')
 const { BUNDLES, SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
@@ -18,6 +18,23 @@ const github = axios.create({
 })
 
 const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
+
+const formatMessage = ({ grouped, previous, version }) => {
+  let changelog = `*Changelog (by label): from ${previous} to ${version}*`
+  Object.entries(grouped).forEach(([label, item]) => {
+    changelog += `\n*${label}*\n`
+    item.slice(0, COMMIT_LIMIT).forEach(({ t1, t2, s, b }) => {
+      changelog += `\n• ${t1}${t2 ? `/${t2}` : ''} - ${s}`
+      if (b) {
+        changelog += `\n${b.split('\n').map(v => `> ${v}`).join('\n')}` // include body
+      }
+    })
+    if (item.length > COMMIT_LIMIT) {
+      changelog += `• ${item.length - COMMIT_LIMIT} more...\n`
+    }
+  })
+  return changelog
+}
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   const { data: { commits, status } } = await github.get(`/repos/${GITHUB_ORG}/${product}/compare/${base}...${head}`)
@@ -58,18 +75,11 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     acc[label].push(`${[t1, t2].filter(t => t).join('/')} - ${s}`)
     return acc
   }, {})
-  // TODO: need to extend release formatter to support slack blocks mrkdwn format too
-  // const formatted = formatChangelog({ parsed, version: head.slice(0, 7), previous: base.slice(0, 7) })
-  let formatted = `*Changelog: from ${base.slice(0, 7)} to ${head.slice(0, 7)}*\n`
-  Object.entries(parsed).forEach(([label, items]) => {
-    formatted += `\n*${label}*\n`
-    items.slice(0, COMMIT_LIMIT).forEach((item) => {
-      formatted += `• ${item}\n`
-    })
-    if (items.length > COMMIT_LIMIT) {
-      formatted += `• ${items.length - COMMIT_LIMIT} more...\n`
-    }
-  })
+  const grouped = groupParsed(parsed, { by: 'labels' })
+  const previous = base.slice(0, 7)
+  const version = head.slice(0, 7)
+  const formatted = formatMessage({ grouped, previous, version })
+
   const hasBreaking = mayBreak(formatted)
   const r = {
     response_type: 'in_channel',
@@ -89,7 +99,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
             type: 'context',
             elements: [{
               type: 'mrkdwn',
-              text: `(${product}) % npx @eqworks/release changelog --base ${base.slice(0, 7)} --head ${head.slice(0, 7)}`,
+              text: `(${product}) % npx @eqworks/release changelog --base ${previous} --head ${version}`,
             }],
           },
         ],
