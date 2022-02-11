@@ -12,7 +12,7 @@ module.exports.BUNDLES = {
 // TODO: only supports 2-stage comparison for now
 module.exports.SERVICES = {
   overseer: {
-    baseURL: 'httsp://api.eqworks.io',
+    baseURL: 'https://api.eqworks.io',
     stages: ['dev', 'beta'],
     key: 'OVERSEER_VER',
     groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
