@@ -6,7 +6,11 @@ const { parseCommits, groupParsed } = require('@eqworks/release')
 const { BUNDLES, SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
 const { userInGroup, invokeSlackWorker, getChannelName, getSpecificGroupIds } = require('../lib/util')
 
-const { GITHUB_TOKEN, COMMIT_LIMIT = 5, NETLIFY_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking' } = process.env
+const { GITHUB_TOKEN, NETLIFY_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking' } = process.env
+
+const BLOCKS_LIMIT = 50 // slack blocks limit
+const TEXT_LIMIT = 3000 // slack text section blocks are limited to 3000 characters (actually 3001)
+const FILLER = '\n_more..._'
 
 const github = axios.create({
   baseURL: 'https://api.github.com',
@@ -17,23 +21,25 @@ const github = axios.create({
   },
 })
 
-const mayBreak = (message) => ['break', 'incompat'].some((p) => message.toLowerCase().includes(p))
+const mayBreak = (blocks) => blocks.some((b) => b.toLowerCase().includes('break') || b.toLowerCase().includes('incompat'))
 
-const formatMessage = ({ grouped, previous, version }) => {
-  let changelog = `*Changelog (by label): from ${previous} to ${version}*`
-  Object.entries(grouped).forEach(([label, item]) => {
-    changelog += `\n*${label}*\n`
-    item.slice(0, COMMIT_LIMIT).forEach(({ t1, t2, s, b }) => {
-      changelog += `\n• ${t1}${t2 ? `/${t2}` : ''} - ${s}`
+const formatCommitBody = (grouped) => {
+  const commits = []
+  Object.entries(grouped).forEach(([label, items]) => {
+    let block = `*${label}*`
+    for (const { t1, t2, s, b } of items) {
+      block += `\n• ${t1}${t2 ? `/${t2}` : ''} - ${s}`
       if (b) {
-        changelog += `\n${b.split('\n').map(v => `> ${v}`).join('\n')}` // include body
+        block += `\n${b.split('\n').map(v => `> ${v}`).join('\n')}` // include body
       }
-    })
-    if (item.length > COMMIT_LIMIT) {
-      changelog += `• ${item.length - COMMIT_LIMIT} more...\n`
+      if (block.length > TEXT_LIMIT) { // honor slack block text limit
+        block = block.slice(0, TEXT_LIMIT - FILLER.length) + FILLER
+      }
+      commits.push(block)
+      block = '' // same label, no need to repeat
     }
   })
-  return changelog
+  return commits
 }
 
 const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
@@ -54,7 +60,7 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     }
   }
 
-  const contributors = new Set([])
+  const contributors = new Set([]) // TODO: incorporate release contributors reports
   const noMerges = commits
     .filter(({ parents }) => parents.length <= 1)
     .reverse()
@@ -70,45 +76,22 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
     contributors.add(an) // side-effect to populate contributors
     return [`<${html_url}|${sha.slice(0, 7)}>`, s, b.join('\n'), an].join('::')
   })
-  const parsed = (await parseCommits({ logs })).reduce((acc, { labels: [label], t1, msg: { s, t2 } }) => {
-    acc[label] = acc[label] || []
-    acc[label].push(`${[t1, t2].filter(t => t).join('/')} - ${s}`)
-    return acc
-  }, {})
+  const parsed = await parseCommits({ logs })
   const grouped = groupParsed(parsed, { by: 'labels' })
   const previous = base.slice(0, 7)
   const version = head.slice(0, 7)
-  const formatted = formatMessage({ grouped, previous, version })
-
-  const hasBreaking = mayBreak(formatted)
-  const r = {
-    response_type: 'in_channel',
-    attachments: [
-      {
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*${product}* \`${dev}\` is ${status} by ${noMerges.length} commits compared to \`${prod}\``,
-            },
-          },
-          { type: 'divider' },
-          { type: 'section', text: { type: 'mrkdwn', text: formatted } },
-          {
-            type: 'context',
-            elements: [{
-              type: 'mrkdwn',
-              text: `(${product}) % npx @eqworks/release changelog --base ${previous} --head ${version}`,
-            }],
-          },
-        ],
-      },
-    ],
-  }
-  // highlight contributors
-  if (contributors.size > 1) {
-    r.attachments[0].blocks[0].text.text += `\n\nContributors: ${Array.from(contributors).join(', ')}`
+  const commitBody = formatCommitBody(grouped)
+  const hasBreaking = mayBreak(commitBody)
+  const bodyBlocks = commitBody.map((b) => ({ type: 'section', text: { type: 'mrkdwn', text: b } }))
+  let header = [
+    `*${product}* \`${dev}\` is ${status} by ${noMerges.length} commits compared to \`${prod}\``,
+    `*Contributors:* ${Array.from(contributors).join(', ')}`,
+    `*Changelog (by label): from ${previous} to ${version}*`,
+  ]
+  let color = '#eeeeee'
+  if (hasBreaking) {
+    header.push('_May contain breaking changes!_')
+    color = '#FF0000'
   }
   // link to demos calendar
   let demos = null
@@ -121,17 +104,34 @@ const getGitDiff = async ({ product, base, head = 'master', dev, prod }) => {
   // }
   if (demos) {
     const { day, link, events } = demos
-    r.attachments[0].blocks[0].text.text += `\n\n*Demos* on <${link}|${day}>`
+    header.push(`*Demos* on <${link}|${day}>`)
     events.forEach(({ timeSlot }) => {
-      r.attachments[0].blocks[0].text.text += `\n\t• ${timeSlot}`
+      header.push(`\n\t• ${timeSlot}`)
     })
   }
-  // indicate potential breaking changes
-  if (hasBreaking) {
-    r.attachments[0].color = '#FF0000'
-    r.attachments[0].blocks[0].text.text += '\n\n*May contain breaking changes!*'
+  const blocks = [
+    { // header block
+      type: 'section',
+      text: { type: 'mrkdwn', text: header.join('\n') },
+    },
+    ...bodyBlocks,
+    {
+      type: 'context',
+      elements: [{
+        type: 'mrkdwn',
+        text: `(${product}) % npx @eqworks/release changelog --base ${previous} --head ${version}`,
+      }],
+    },
+  ]
+  // dissect blocks into chunks of at most 50
+  const chunks = []
+  for (let i = 0; i < blocks.length; i += BLOCKS_LIMIT) {
+    chunks.push(blocks.slice(i, i + BLOCKS_LIMIT))
   }
-  return r
+  return chunks.map((blocks) => ({
+    response_type: 'in_channel',
+    attachments: [{ color, blocks }],
+  }))
 }
 
 const getServiceMeta = async (product) => {
@@ -193,7 +193,7 @@ const getDiff = async (product) => {
     const { data: { object: { sha: base } } } = await github.get(`/repos/${GITHUB_ORG}/${product}/git/ref/tags/${prod}`)
     r = await getGitDiff({ product, head, base, dev: head, prod })
   }
-  return r
+  return r // diff is an array of one or more chunks of up to 50 blocks
 }
 
 const worker = async ({
@@ -202,15 +202,19 @@ const worker = async ({
   key = getKey({ channel, product }),
   response_url,
 }) => {
-  if (BUNDLES[product]) {
-    const rs = await Promise.all(BUNDLES[product].map(getDiff))
-    await releaseDiffLock(key)
-    return Promise.all(rs.map((r) => axios.post(response_url, r)))
-  }
-
-  const r = await getDiff(product)
+  const rs = BUNDLES[product] ? await Promise.all(BUNDLES[product].map(getDiff)) : [await getDiff(product)]
   await releaseDiffLock(key)
-  return axios.post(response_url, r)
+  return Promise.all(rs.map(async (r) => {
+    if (!Array.isArray(r)) { // case for no diff found
+      return axios.post(response_url, r)
+    }
+    // make sure they're synchronouslly sent following each other if multiple chunks
+    const responses = []
+    for (const rr of r) {
+      responses.push(await axios.post(response_url, rr))
+    }
+    return responses
+  }))
 }
 
 const listener = async ({ command, ack, respond }) => {
