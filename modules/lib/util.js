@@ -15,16 +15,18 @@ const SLACK_GROUP_IDS = {
   'product-group': 'S1FFRAXQA',
 }
 
-module.exports.lambda = new AWS.Lambda({
+module.exports.lambda = new AWS.Lambda({ apiVersion: '2015-03-31', region: AWS_REGION })
+
+module.exports.legionLambda = new AWS.Lambda({
   apiVersion: '2015-03-31',
   region: AWS_REGION,
   endpoint: process.env.IS_OFFLINE // available through serverless-offline plugin
     ? 'http://localhost:3002'
-    : 'https://lambda.us-east-1.amazonaws.com',
+    : `https://lambda.${AWS_REGION}.amazonaws.com`,
 })
 
 module.exports.getFuncName = f => `legion-${STAGE}-${f}`
-module.exports.invokeSlackWorker = (Payload) => this.lambda.invoke({
+module.exports.invokeSlackWorker = (Payload) => this.legionLambda.invoke({
   FunctionName: this.getFuncName('slack'),
   InvocationType: 'Event',
   Payload: JSON.stringify(Payload),

@@ -1,7 +1,7 @@
 const axios = require('axios')
 const { getTasksForProject } = require('@eqworks/avail-bot')
 
-const { lambda, getFuncName  } = require('../lib/util')
+const { legionLambda: lambda, getFuncName  } = require('../lib/util')
 
 const { DEPLOYED = false } = process.env
 

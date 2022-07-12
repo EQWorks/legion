@@ -1,7 +1,7 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
 
-const { lambda, getFuncName } = require('../lib/util')
+const { legionLambda: lambda, getFuncName } = require('../lib/util')
 const {
   _blocks,
   button,
