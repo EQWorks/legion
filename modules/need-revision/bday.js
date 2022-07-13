@@ -368,7 +368,7 @@ const route = (req, res) => {
 
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('slack'),
+      FunctionName: getFuncName('slack-worker'),
       InvocationType: 'Event',
       Payload: JSON.stringify({ type: 'bday', payload }),
     }, (err) => {
@@ -432,7 +432,7 @@ const route = (req, res) => {
 
 //   if (DEPLOYED) {
 //     lambda.invoke({
-//       FunctionName: getFuncName('slack'),
+//       FunctionName: getFuncName('slack-worker'),
 //       InvocationType: 'Event',
 //       Payload: JSON.stringify({ type: 'bday', payload }),
 //     }, (err) => {

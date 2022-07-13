@@ -29,7 +29,7 @@ module.exports.legionLambda = new AWS.Lambda({
 
 module.exports.getFuncName = f => `legion-${STAGE}-${f}`
 module.exports.invokeSlackWorker = (Payload) => this.legionLambda.invoke({
-  FunctionName: this.getFuncName('slack'),
+  FunctionName: this.getFuncName('slack-worker'),
   InvocationType: 'Event',
   Payload: JSON.stringify(Payload),
 }).promise()
