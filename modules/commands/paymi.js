@@ -37,16 +37,14 @@ const getReportByType = async ({ type, params }) => {
   return { ...response, filename }
 }
 
-const worker = async ({ cmd, type, params, response_url, channel_id, user_id, slash }) => {
-  let text = `Unable to execute \`${cmd} ${type} ${params}\``
-  let response_type = 'ephemeral'
-  if (cmd === 'report') {
+const worker = async ({ cmd, type, params, response_url, channel_id, slash }) => {
+  let text = `Unable to execute \`${slash}\``
+  if (cmd === 'report') { // so far only report command is supported
     try {
       const { Payload, filename } = await getReportByType({ type, params })
       text = [
         `Report fetched: \`${filename}\``,
         `Slash command: \`${slash}\``,
-        `Requested by <@${user_id}>`,
       ].join('\n')
       // upload to Slack as CSV
       await slackClient.files.upload({
@@ -54,48 +52,55 @@ const worker = async ({ cmd, type, params, response_url, channel_id, user_id, sl
         content: array2CSV(JSON.parse(Payload).data),
         filename,
       })
-      response_type = 'in_channel'
     } catch (err) {
       console.error(err)
-      text = `Server error while executing \`${cmd} ${type} ${params}\``
+      text = `Server error while executing \`${slash}\``
     }
   }
-  return axios.post(response_url, {
-    response_type,
-    replace_original: true,
-    text,
-  })
+  return axios.post(response_url, { response_type: 'in_channel', text })
 }
 
-const listener = async ({ command, ack, respond }) => {
-  await ack()
-  const { response_url, text, channel_name, channel_id, command: _command, user_id } = command
+const listener = async ({ command, ack }) => {
+  const { response_url, text, channel_name, channel_id, command: _command } = command
   const [, cmd, _type, _params] = text.match(/(\w+)\s+(\w+)\s(.*)/)
   if (channel_name !== 'bot-cmd' && !channel_name.toLowerCase().includes('paymi')) {
-    await respond({ text: `Command \`${cmd}\` is not available for <#${channel_id}>` })
+    await ack({
+      text: `Command \`${cmd}\` is not available for <#${channel_id}>`,
+      response_type: 'ephemeral',
+    })
     return
   }
   if (cmd.toLowerCase() !== 'report') {
-    await respond({ text: `Unknown command: \`${_command} ${cmd}\`` })
+    await ack({
+      text: `Unknown command: \`${_command} ${cmd}\``,
+      response_type: 'ephemeral',
+    })
     return
   }
 
   const type = _type.toLowerCase()
   if (!['merchants', 'merchant', 'offers'].includes(type)) {
-    await respond({ text: `Unknown command type: \`${_command} ${cmd} ${type}\`` })
+    await ack({
+      text: `Unknown command type: \`${_command} ${cmd} ${type}\``,
+      response_type: 'ephemeral',
+    })
     return
   }
 
   const params = _params.trim()
   if (!params) {
-    await respond({ text: `Missing params for \`${_command} ${cmd} ${type}\`` })
+    await ack({
+      text: `Missing params for \`${_command} ${cmd} ${type}\``,
+      response_type: 'ephemeral',
+    })
     return
   }
+
   const slash = `${_command} ${cmd} ${type} ${params}` // original request slash command
-  const payload = { cmd, type, params, response_url, channel_id, user_id, slash }
+  const payload = { cmd, type, params, response_url, channel_id, slash }
 
   await invokeSlackWorker({ type: 'paymi', payload }) // underlying lambda invoke is async
-  await respond({ text: `Requesting \`${slash}\`` })
+  await ack({ text: `Executing \`${slash}\`. This could take a while...`, response_type: 'in_channel' })
 }
 
 module.exports = { worker, listener }
