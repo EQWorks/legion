@@ -75,7 +75,7 @@ module.exports.getSetLock = (dbName) => async ({
   if (exists) {
     return { ...exists, locked: true }
   }
-  return await db.put(payload, key)
+  return await db.put(payload, key, { expireAt: new Date(timestamp.getTime() + 1000 * 60 * 5) })
 }
 
 module.exports.releaseLock = (dbName) => (key) => {

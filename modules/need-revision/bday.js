@@ -1,7 +1,7 @@
 const axios = require('axios')
 const { WebClient } = require('@slack/web-api')
 
-const { lambda, getFuncName } = require('../lib/util')
+const { legionLambda: lambda, getFuncName } = require('../lib/util')
 const {
   _blocks,
   button,
@@ -368,7 +368,7 @@ const route = (req, res) => {
 
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('slack'),
+      FunctionName: getFuncName('slack-worker'),
       InvocationType: 'Event',
       Payload: JSON.stringify({ type: 'bday', payload }),
     }, (err) => {
@@ -432,7 +432,7 @@ const route = (req, res) => {
 
 //   if (DEPLOYED) {
 //     lambda.invoke({
-//       FunctionName: getFuncName('slack'),
+//       FunctionName: getFuncName('slack-worker'),
 //       InvocationType: 'Event',
 //       Payload: JSON.stringify({ type: 'bday', payload }),
 //     }, (err) => {

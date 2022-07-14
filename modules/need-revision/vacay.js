@@ -1,7 +1,7 @@
 const axios = require('axios')
 const { getTasksForProject } = require('@eqworks/avail-bot')
 
-const { lambda, getFuncName  } = require('../lib/util')
+const { legionLambda: lambda, getFuncName  } = require('../lib/util')
 
 const { DEPLOYED = false } = process.env
 
@@ -183,7 +183,7 @@ const route = (req, res) => {
   const payload = { response_url }
   if (DEPLOYED) {
     lambda.invoke({
-      FunctionName: getFuncName('slack'),
+      FunctionName: getFuncName('slack-worker'),
       InvocationType: 'Event',
       Payload: JSON.stringify({ type: 'vacay', payload }),
     }, (err) => {

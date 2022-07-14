@@ -5,9 +5,8 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs12.x
-  timeout: 30
+  timeout: 3 # how long Slack will wait for an initial response
   region: us-east-1
-  memorySize: 256
   versionFunctions: false # temp work around for provisionedConcurrency
   iamRoleStatements:
     - Effect: "Allow"
@@ -42,15 +41,16 @@ plugins:
 functions:
   receiver:
     handler: app.handler
-    # keep this hot for immediate slack response
-    provisionedConcurrency: 1
+    provisionedConcurrency: 1 # keep this hot for immediate slack response
+    memorySize: 256 # no need for a more powerful instance for the receiver
     events:
       - http:
           path: slack/events
           method: post
 
-  slack:
+  slack-worker:
     handler: worker.handler
+    timeout: 900 # allow for long-running tasks
 
 custom:
   customDomain:

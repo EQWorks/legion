@@ -5,6 +5,8 @@ const { SLACK_OAUTH, STAGE = 'dev', AWS_REGION = 'us-east-1' } = process.env
 
 const web = new WebClient(SLACK_OAUTH)
 
+module.exports.slackClient = web
+
 // to get group id, can run this.listUserGroups() with await or promises and look at 'id' key
 const SLACK_GROUP_IDS = {
   'snoketeam': 'SA4K92V8F',
@@ -15,17 +17,19 @@ const SLACK_GROUP_IDS = {
   'product-group': 'S1FFRAXQA',
 }
 
-module.exports.lambda = new AWS.Lambda({
+module.exports.lambda = new AWS.Lambda({ apiVersion: '2015-03-31', region: AWS_REGION })
+
+module.exports.legionLambda = new AWS.Lambda({
   apiVersion: '2015-03-31',
   region: AWS_REGION,
   endpoint: process.env.IS_OFFLINE // available through serverless-offline plugin
     ? 'http://localhost:3002'
-    : 'https://lambda.us-east-1.amazonaws.com',
+    : `https://lambda.${AWS_REGION}.amazonaws.com`,
 })
 
 module.exports.getFuncName = f => `legion-${STAGE}-${f}`
-module.exports.invokeSlackWorker = (Payload) => this.lambda.invoke({
-  FunctionName: this.getFuncName('slack'),
+module.exports.invokeSlackWorker = (Payload) => this.legionLambda.invoke({
+  FunctionName: this.getFuncName('slack-worker'),
   InvocationType: 'Event',
   Payload: JSON.stringify(Payload),
 }).promise()
