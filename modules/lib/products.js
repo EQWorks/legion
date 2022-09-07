@@ -33,12 +33,14 @@ module.exports.SERVICES = {
 
 module.exports.CLIENTS = {
   overlord: {
-    siteId: 'overlord.eqworks.io',
+    siteId: 'overlord.eqworks.io', // netlify site ID, also the main domain
+    projectId: 'prj_TqFdYCSg60gcDJnnfeJ68bb7wPiy', // vercel project ID
     stages: ['master', 'prod'],
     groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
   },
   snoke: {
-    siteId: 'console.locus.place',
+    siteId: 'console.locus.place', // netlify site ID, also the main domain
+    projectId: 'prj_TqFdYCSg60gcDJnnfeJ68bb7wPiy', // vercel project ID
     stages: ['dev', 'prod'],
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
