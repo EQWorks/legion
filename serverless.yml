@@ -33,6 +33,9 @@ provider:
     GOOGLE_SECRET_KEY: ${env:GOOGLE_SECRET_KEY}
     GOOGLE_REFRESH_TOKEN: ${env:GOOGLE_REFRESH_TOKEN}
     GOOGLE_DEMO_CALENDAR: ${env:GOOGLE_DEMO_CALENDAR}
+    VERCEL_TEAM: ${env:VERCEL_TEAM}
+    VERCEL_TOKEN: ${env:VERCEL_TOKEN}
+    DETA_KEY: ${env:DETA_KEY}
 
 plugins:
   - serverless-offline
