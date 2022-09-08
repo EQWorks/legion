@@ -1,16 +1,20 @@
 const axios = require('axios')
-const NetlifyAPI = require('netlify')
 const { parseCommits, groupParsed } = require('@eqworks/release')
 
 // const { gCalendarGetEvents } = require('../lib/googleapis')
 const { BUNDLES, SERVICES, CLIENTS, getSetLock, releaseLock, getKey } = require('../lib/products')
 const { userInGroup, invokeSlackWorker, getChannelName, getSpecificGroupIds } = require('../lib/util')
 
-const { GITHUB_TOKEN, NETLIFY_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking' } = process.env
+const { GITHUB_TOKEN, GITHUB_ORG = 'EQWorks', GITHUB_USER = 'woozyking', VERCEL_TOKEN, VERCEL_TEAM } = process.env
 
 const BLOCKS_LIMIT = 50 // slack blocks limit
 const TEXT_LIMIT = 3000 // slack text section blocks are limited to 3000 characters (actually 3001)
 const FILLER = '\n_more..._'
+
+const vercel = axios.create({
+  baseURL: 'https://api.vercel.com',
+  headers: { Authorization: `Bearer ${VERCEL_TOKEN}` }
+})
 
 const github = axios.create({
   baseURL: 'https://api.github.com',
@@ -146,18 +150,29 @@ const getServiceMeta = async (product) => {
   return { head, base, dev, prod }
 }
 
-const getClientMeta = async (product) => {
-  const { siteId = '', stages = [] } = CLIENTS[product] || {}
-  const [dev, prod] = stages
+const getVercelMeta = (product) => {
+  const { projectId = '' } = CLIENTS[product] || {}
+  return vercel.get('/v6/deployments', {
+    params: {
+      projectId,
+      teamId: VERCEL_TEAM,
+      target: 'production',
+      limit: 1,
+    }
+  }).then(({ data: { deployments = [] } = {} }) => deployments[0] || {})
+}
 
-  const netlify = new NetlifyAPI(NETLIFY_TOKEN)
-  const { published_deploy: { commit_ref: base = '' } = {} } = await netlify.getSite({ siteId })
+const getClientMeta = async (product) => {
+  const { meta: { githubCommitSha: base = '' } = {} } = await getVercelMeta(product)
 
   if (!base) {
-    throw new Error(`\`${product}\` has not been published on Netlify`)
+    throw new Error(`\`${product}\` has not been published on Vercel`)
   }
   // get default branch as head
   const { data: { default_branch } } = await github.get(`/repos/${GITHUB_ORG}/${product}`)
+
+  const { stages = [] } = CLIENTS[product] || {}
+  const [dev, prod] = stages
 
   return { head: default_branch, base, dev, prod }
 }
@@ -248,4 +263,4 @@ const listener = async ({ command, ack, respond }) => {
   await respond(`Diffing for ${product}...`)
 }
 
-module.exports = { worker, listener, github }
+module.exports = { worker, listener, github, getVercelMeta }
