@@ -34,7 +34,7 @@ module.exports.SERVICES = {
 module.exports.CLIENTS = {
   overlord: {
     siteId: 'overlord.eqworks.io', // netlify site ID, also the main domain
-    projectId: 'prj_TqFdYCSg60gcDJnnfeJ68bb7wPiy', // vercel project ID
+    projectId: 'prj_qgapSHRWtoi5pUdGrHFXns2qFljX', // vercel project ID
     stages: ['master', 'prod'],
     groups: getSpecificGroupIds(['flashteam', 'overseerteam', 'overlordteam'])
   },

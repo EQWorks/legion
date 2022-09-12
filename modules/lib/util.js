@@ -22,7 +22,7 @@ module.exports.lambda = new AWS.Lambda({ apiVersion: '2015-03-31', region: AWS_R
 module.exports.legionLambda = new AWS.Lambda({
   apiVersion: '2015-03-31',
   region: AWS_REGION,
-  endpoint: process.env.IS_OFFLINE // available through serverless-offline plugin
+  endpoint: (process.env.IS_OFFLINE || false) // available through serverless-offline plugin
     ? 'http://localhost:3002'
     : `https://lambda.${AWS_REGION}.amazonaws.com`,
 })
