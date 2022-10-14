@@ -18,7 +18,7 @@ const parseIDs = (params) => params.split(',')
   .filter(id => id.match(/^\d+$/))
   .map(id => parseInt(id, 10))
 
-const getReportByType = async ({ type, params }) => {
+const getLifeTimeReport = async ({ type, params }) => {
   let payload = null
   let key = type
   let filename = 'lifetime_report.csv'
@@ -41,7 +41,7 @@ const worker = async ({ cmd, type, params, response_url, channel_id, slash }) =>
   let text = `Unable to execute \`${slash}\``
   if (cmd === 'report') { // so far only report command is supported
     try {
-      const { Payload, filename } = await getReportByType({ type, params })
+      const { Payload, filename } = await getLifeTimeReport({ type, params })
       text = [
         `Report fetched: \`${filename}\``,
         `Slash command: \`${slash}\``,
@@ -59,6 +59,14 @@ const worker = async ({ cmd, type, params, response_url, channel_id, slash }) =>
   }
   return axios.post(response_url, { response_type: 'in_channel', text })
 }
+
+const getWeeklyOpsReport = ({ params, channel_id }) => lambda.invoke({
+  FunctionName: `paymi-report-jobs-${STAGE}-weekly_ops_report`,
+  InvocationType: 'Event', // we delegate this fully to paymi-report-jobs side
+  Payload: JSON.stringify({ channels: channel_id, date: params }),
+}).promise()
+
+const REPORT_TYPES = Object.freeze(['merchants', 'merchant', 'offers', 'weekly'])
 
 const listener = async ({ command, ack }) => {
   const { response_url, text, channel_name, channel_id, command: _command } = command
@@ -79,9 +87,9 @@ const listener = async ({ command, ack }) => {
   }
 
   const type = _type.toLowerCase()
-  if (!['merchants', 'merchant', 'offers'].includes(type)) {
+  if (!REPORT_TYPES.includes(type)) {
     await ack({
-      text: `Unknown command type: \`${_command} ${cmd} ${type}\``,
+      text: `Unknown ${cmd} type: \`${_command} ${cmd} ${type}\``,
       response_type: 'ephemeral',
     })
     return
@@ -97,9 +105,14 @@ const listener = async ({ command, ack }) => {
   }
 
   const slash = `${_command} ${cmd} ${type} ${params}` // original request slash command
-  const payload = { cmd, type, params, response_url, channel_id, slash }
 
-  await invokeSlackWorker({ type: 'paymi', payload }) // underlying lambda invoke is async
+  if (type === 'weekly') {
+    await getWeeklyOpsReport({ params, channel_id }) // underlying lambda invoke is async
+  } else {
+    const payload = { cmd, type, params, response_url, channel_id, slash }
+    await invokeSlackWorker({ type: 'paymi', payload }) // underlying lambda invoke is async
+  }
+
   await ack({ text: `Executing \`${slash}\`. This could take a while...`, response_type: 'in_channel' })
 }
 
