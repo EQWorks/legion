@@ -44,6 +44,16 @@ module.exports.CLIENTS = {
     stages: ['dev', 'prod'],
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
+  'cox-dashboard': { // same as paymi-dashboard, just a different stage/branch
+    projectId: 'prj_V3ecJ0BYs8VTQyn7EYBcbtZOhQ4U', // vercel project ID
+    stages: ['main', 'v1/cox'],
+    groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
+  },
+  'paymi-dashboard': { // same as paymi-dashboard, just a different stage/branch
+    projectId: 'prj_V3ecJ0BYs8VTQyn7EYBcbtZOhQ4U', // vercel project ID
+    stages: ['main', 'v1/paymi'],
+    groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
+  },
 }
 
 module.exports.getKey = ({ channel, product, timestamp = new Date(), tsFloor = 1000 * 60 * 5 }) => {
