@@ -45,11 +45,13 @@ module.exports.CLIENTS = {
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
   'cox-dashboard': { // same as paymi-dashboard, just a different stage/branch
+    repo: 'snoke-dashboard', // by default uses the CLIENTS[key], but use repo value if available
     projectId: 'prj_V3ecJ0BYs8VTQyn7EYBcbtZOhQ4U', // vercel project ID
     stages: ['main', 'v1/cox'],
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
   },
   'paymi-dashboard': { // same as paymi-dashboard, just a different stage/branch
+    repo: 'snoke-dashboard', // by default uses the CLIENTS[key], but use repo value if available
     projectId: 'prj_V3ecJ0BYs8VTQyn7EYBcbtZOhQ4U', // vercel project ID
     stages: ['main', 'v1/paymi'],
     groups: getSpecificGroupIds(['firstorderteam', 'snoketeam'])
