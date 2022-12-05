@@ -66,6 +66,14 @@ const getWeeklyOpsReport = ({ params, channel_id }) => lambda.invoke({
   Payload: JSON.stringify({ channels: channel_id, date: params }),
 }).promise()
 
+const getRangeMemberBalances = ({ start, end, channel_id }) => lambda.invoke({
+  FunctionName: `paymi-report-jobs-${STAGE}-range_member_balances`,
+  InvocationType: 'Event', // we delegate this fully to paymi-report-jobs side
+  Payload: JSON.stringify({ channels: channel_id, start, end }),
+})
+
+const isISODate = (s) => /\d{4}-\d{2}-\d{2}/.test(s) // very crude check
+
 const REPORT_TYPES = Object.freeze(['merchants', 'merchant', 'offers', 'weekly'])
 
 const listener = async ({ command, ack }) => {
@@ -108,6 +116,17 @@ const listener = async ({ command, ack }) => {
 
   if (type === 'weekly') {
     await getWeeklyOpsReport({ params, channel_id }) // underlying lambda invoke is async
+  } else if (type === 'mb') {
+    // TODO: more comprehensive validation of input
+    const [start, end] = params.split(/\s+/)
+    if (!isISODate(start) || !isISODate(end)) {
+      await ack({
+        text: `Need both start and end dates in YYYY-MM-DD format for \`${_command} ${cmd} ${type}\``,
+        response_type: 'ephemeral',
+      })
+      return
+    }
+    await getRangeMemberBalances({ channel_id, start, end })
   } else {
     const payload = { cmd, type, params, response_url, channel_id, slash }
     await invokeSlackWorker({ type: 'paymi', payload }) // underlying lambda invoke is async
