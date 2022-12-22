@@ -60,21 +60,18 @@ const worker = async ({ cmd, type, params, response_url, channel_id, slash }) =>
   return axios.post(response_url, { response_type: 'in_channel', text })
 }
 
-const getWeeklyOpsReport = ({ params, channel_id }) => lambda.invoke({
-  FunctionName: `paymi-report-jobs-${STAGE}-weekly_ops_report`,
+const callPaymiReportJob = (func) => (payload) => lambda.invoke({
+  FunctionName: `paymi-report-jobs-${STAGE}-${func}`,
   InvocationType: 'Event', // we delegate this fully to paymi-report-jobs side
-  Payload: JSON.stringify({ channels: channel_id, date: params }),
+  Payload: JSON.stringify(payload),
 }).promise()
-
-const getRangeMemberBalances = ({ start, end, channel_id }) => lambda.invoke({
-  FunctionName: `paymi-report-jobs-${STAGE}-range_member_balances`,
-  InvocationType: 'Event', // we delegate this fully to paymi-report-jobs side
-  Payload: JSON.stringify({ channels: channel_id, start, end }),
-}).promise()
+const getWeeklyOpsReport = callPaymiReportJob('weekly_ops_report')
+const getRangeMemberBalances = callPaymiReportJob('range_member_balances')
+const getKPIReport = callPaymiReportJob('daily_kpi_report')
 
 const isISODate = (s) => /\d{4}-\d{2}-\d{2}/.test(s) // very crude check
 
-const REPORT_TYPES = Object.freeze(['merchants', 'merchant', 'offers', 'weekly', 'mb'])
+const REPORT_TYPES = Object.freeze(['merchants', 'merchant', 'offers', 'weekly', 'mb', 'kpi'])
 
 const listener = async ({ command, ack }) => {
   const { response_url, text, channel_name, channel_id, command: _command } = command
@@ -113,9 +110,9 @@ const listener = async ({ command, ack }) => {
   }
 
   const slash = `${_command} ${cmd} ${type} ${params}` // original request slash command
-
+  // TODO: refactor to make the flow control less tedious
   if (type === 'weekly') {
-    await getWeeklyOpsReport({ params, channel_id }) // underlying lambda invoke is async
+    await getWeeklyOpsReport({ date: params, channels: channel_id }) // underlying lambda invoke is async
   } else if (type === 'mb') {
     // TODO: more comprehensive validation of input
     const [start, end] = params.split(/\s+/)
@@ -126,7 +123,9 @@ const listener = async ({ command, ack }) => {
       })
       return
     }
-    await getRangeMemberBalances({ channel_id, start, end }) // underlying lambda invoke is async
+    await getRangeMemberBalances({ channels: channel_id, start, end }) // underlying lambda invoke is async
+  } else if (type === 'kpi') {
+    await getKPIReport({ date: params, channels: channel_id, lite: true }) // underlying lambda invoke is async
   } else {
     const payload = { cmd, type, params, response_url, channel_id, slash }
     await invokeSlackWorker({ type: 'paymi', payload }) // underlying lambda invoke is async
